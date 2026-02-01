@@ -1,0 +1,9 @@
+{
+  "enabled": true,
+  "maintenance": false,
+  "db": "server=localhost;database=stella;user id=stella;password=stella",
+  "unlock_all_songs": true,
+  "arena_open": true,
+  "arena_session": 22
+}
+

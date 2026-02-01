@@ -1,0 +1,7 @@
+﻿{
+  "enabled": true,
+  "db": "server=localhost;database=stella;user id=stella;password=stella",
+  "maintenance": false,
+  "register_mode": true,
+  "private_mode": false
+}
