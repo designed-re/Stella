@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="KBinXml.Net/src/KbinXml.Net/KbinXml.Net.csproj" />
+  <Project Path="Stella.Abstractions/Stella.Abstractions.csproj" Id="cff364d8-1028-4b82-bc7c-26fd8525cd06" />
+  <Project Path="StellaKFCPlugin/StellaKFCPlugin.csproj" Id="60a9a33e-6359-4373-afcb-d4438a37586b" />
+  <Project Path="TestClient/TestClient.csproj" Id="e0415c64-5416-4329-90a6-81375862af22" />
+  <Project Path="CorePlugin/CorePlugin.csproj" Id="e9cb3f21-b8fa-471f-979d-991baf19e43a" />
+  <Project Path="Stella.MigrationHelper/Stella.MigrationHelper.csproj" Id="14140101-47ec-4e8a-beea-eab17c4c68d7" />
+  <Project Path="Stella/Stella.csproj" />
+</Solution>

@@ -1,0 +1,7 @@
+{
+  "enabled": true,
+  "maintenance": false,
+  "db": "server=localhost;database=stella_kfc;user id=stella;password=stella",
+  "unlock_all_songs": true
+}
+
