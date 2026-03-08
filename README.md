@@ -109,3 +109,8 @@ INSERT INTO `sv_events` (`id`, `event`, `enabled`, `version`) VALUES
 /*!40111 SET SQL_NOTES=IFNULL(@OLD_SQL_NOTES, 1) */;
 
 ```
+
+## Deps
+
+Originally coded by [KBinXml.Net By Milkitic](https://github.com/Milkitic/KBinXml.Net)
+Modified to add types when serialization
