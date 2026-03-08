@@ -113,4 +113,4 @@ INSERT INTO `sv_events` (`id`, `event`, `enabled`, `version`) VALUES
 ## Deps
 
 Originally coded by [KBinXml.Net By Milkitic](https://github.com/Milkitic/KBinXml.Net)
-Modified to add types when serialization
+Stella coded to add types when serialization
