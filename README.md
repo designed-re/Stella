@@ -1,116 +1,105 @@
-# server
+# Stella
 
-Stella is an **unofficial implementation of Konami's e-amusement server**.  
+Stella is an **unofficial implementation of Konami's e-amusement server**.
 
 ## Features
 - Partial implementation of e-amusement protocol
 - Data exchange between client and server
 - Modular and extensible architecture
 - Plugin support
+- SOUND VOLTEX EXCEED GEAR (sv6) + NABLA (sv7) unified handler support
 
 ## Currently Enabled Plugins
-- Core Plugin
-- KFC Plugin
+- **Core Plugin** — card, facility, eacoin, pcb, services, eventlog
+- **KFC Plugin** — SOUND VOLTEX EXCEED GEAR + NABLA (common, load, save, new, hiscore, lounge, play, frozen, buy, print, save_valgene, save_pb, save_e, save_c, save_mega)
 
 ## Requirements
 - .NET SDK 10
 - Supported OS: Windows, Linux
 - MariaDB
+- `KBinXml.Net` git submodule (commit 73d1b9a) — do NOT replace with NuGet package
 
-## Installation & Usage
+## Quick Start (Docker)
+
 ```bash
-# Clone the repository
-git clone https://gitlab.lunalight.place/stella/server.git
-cd server
-
-# Build the project
-dotnet build
-
-# Run the server
-dotnet run
+git clone --recurse-submodules <repo-url>
+cd stella
+docker compose up --build
 ```
 
+The server listens on `http://localhost:8080`. MariaDB starts alongside with `stella_kfc` and `stella_core` databases pre-created. EF migrations and static-data seeding run automatically on first boot.
 
-## Inital migration
+### Configuration (env vars)
 
-You must **Run server once**
-```sql
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET NAMES utf8 */;
-/*!50503 SET NAMES utf8mb4 */;
-/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
-/*!40103 SET TIME_ZONE='+00:00' */;
-/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
-/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
-/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+| Env var | Default | Description |
+|---|---|---|
+| `STELLA_KFC_DB` | `Server=db;...Database=stella_kfc` | KFC plugin DB connection |
+| `STELLA_CORE_DB` | `Server=db;...Database=stella_core` | Core plugin DB connection |
+| `STELLA_SERVER_URL` | `http://10.0.1.133:8080/eamuse` | Base URL returned by `services.get` |
+| `STELLA_SERVER_HOST` | `10.0.1.133` | Keepalive host |
+| `STELLA_KFC_UNLOCK_ALL_SONGS` | `true` | Unlock all songs |
+| `STELLA_KFC_ARENA_OPEN` | `true` | Keep arena open |
+| `STELLA_KFC_ARENA_NO_ENDTIME` | `true` | Arena no end time |
+| `STELLA_KFC_ARENA_SESSION` | `22` | Arena session set |
+| `STELLA_KFC_ARENA_STATION` | `None` | Arena station set |
+| `STELLA_KFC_USE_BLASTERPASS` | `true` | Use BLASTER PASS |
+| `STELLA_KFC_UNLOCK_ALL_NAVIGATORS` | `false` | Unlock navigators |
+| `STELLA_KFC_UNLOCK_ALL_APPEAL_CARDS` | `false` | Unlock appeal cards |
+| `STELLA_KFC_UNLOCK_ALL_VALK_ITEMS` | `false` | Unlock customization items |
 
--- 테이블 데이터 stella.sv_events:~55 rows (대략적) 내보내기
-INSERT INTO `sv_events` (`id`, `event`, `enabled`, `version`) VALUES
-	(1, 'DEMOGAME_PLAY', 1, 6),
-	(2, 'MATCHING_MODE', 1, 6),
-	(3, 'MATCHING_MODE_FREE_IP', 1, 6),
-	(4, 'LEVEL_LIMIT_EASING', 1, 6),
-	(5, 'ACHIEVEMENT_ENABLE', 1, 6),
-	(6, 'APICAGACHADRAW\\t30', 1, 6),
-	(7, 'VOLFORCE_ENABLE', 1, 6),
-	(8, 'AKANAME_ENABLE', 1, 6),
-	(9, 'PAUSE_ONLINEUPDATE', 1, 6),
-	(10, 'CONTINUATION', 1, 6),
-	(11, 'TENKAICHI_MODE', 0, 6),
-	(12, 'QC_MODE', 0, 6),
-	(13, 'KAC_MODE', 0, 6),
-	(14, 'DISABLE_MONITOR_ID_CHECK', 1, 6),
-	(15, 'FAVORITE_APPEALCARD_MAX\\t200', 1, 6),
-	(16, 'FAVORITE_MUSIC_MAX\\t200', 1, 6),
-	(17, 'STANDARD_UNLOCK_ENABLE', 1, 6),
-	(18, 'PLAYERJUDGEADJ_ENABLE', 1, 6),
-	(19, 'MIXID_INPUT_ENABLE', 1, 6),
-	(20, 'DISP_PASELI_BANNER', 1, 6),
-	(21, 'CHARACTER_IGNORE_DISABLE\\t122,123,131,139,140,143,149,160,162,163,164,167,170,174,175', 1, 6),
-	(22, 'STAMP_IGNORE_DISABLE\\t273~312,773~820,993~1032,1245~1284,1469~1508,1585~1632,1633~1672,1737~1776,1777~1816,1897~1936', 1, 6),
-	(23, 'SUBBG_IGNORE_DISABLE\\t166~185,281~346,369~381,419~438,464~482,515~552,595~616,660~673,714~727', 1, 6),
-	(24, 'BEGINNER_MUSIC_FOLDER\\t56,78,80,86,87,91,111,128,134,275,278,180,697,770,769,779,842,948,940,1057,1056,1096,932,1136,1469,1480', 1, 6),
-	(25, 'BEGINNER_MUSIC_FOLDER\\t1471,1758,1753,1739,1867,1866,1860,1857,1903,1904,1859,1863,1856,1864,1865,1916,1917,1914,1915,1918,1960', 1, 6),
-	(26, 'BEGINNER_MUSIC_FOLDER\\t1961,1962,2029,2028,2030,2031,2035,2036,1905,1882,2058,2073,2070,2069,2074,2075,2067,2068,2066,2165,2166', 1, 6),
-	(27, 'BEGINNER_MUSIC_FOLDER\\t2174,2175,2193,2195,2196,2213,2216,2214,2215,2205,2206,2224,2229,2228,2230,2241,2244,2243,2242,2245,2240', 1, 6),
-	(28, 'BEGINNER_MUSIC_FOLDER\\t2251,2252,2220,2221,2289,2288,2291,2287,2290', 1, 6),
-	(29, 'OMEGA_ENABLE\\t1,2,3,4,5,6,7,8,9', 1, 6),
-	(30, 'OMEGA_ARS_ENABLE', 1, 6),
-	(31, 'HEXA_ENABLE\\t1,2,3,4,5,6,7,8,9,10,11,12', 1, 6),
-	(32, 'HEXA_OVERDRIVE_ENABLE\\t8', 1, 6),
-	(33, 'SKILL_ANALYZER_ABLE', 1, 6),
-	(34, 'BLASTER_ABLE', 1, 6),
-	(35, 'PREMIUM_TIME_ENABLE', 1, 6),
-	(36, 'MEGAMIX_ENABLE', 1, 6),
-	(37, 'ARENA_ENABLE', 1, 6),
-	(38, 'ARENA_LOCAL_TO_ONLINE_ENABLE', 1, 6),
-	(39, 'ARENA_ALTER_MODE_WINDOW_ENABLE', 1, 6),
-	(40, 'ARENA_PASS_MATCH_WINDOW_ENABLE', 1, 6),
-	(41, 'ARENA_VOTE_MODE_ENABLE', 1, 6),
-	(42, 'ARENA_LOCAL_ULTIMATE_MATCH_ALWAYS', 1, 6),
-	(43, 'MEGAMIX_BATTLE_MATCH_ENABLE', 1, 6),
-	(44, 'DISABLED_MUSIC_IN_ARENA_ONLINE', 1, 6),
-	(45, 'SINGLE_BATTLE_ENABLE', 1, 6),
-	(46, 'GENERATOR_ABLE', 1, 6),
-	(47, 'CREW_SELECT_ABLE', 1, 6),
-	(48, 'VALGENE_ENABLE', 1, 6),
-	(49, 'PLAYER_RADAR_ENABLE', 1, 6),
-	(50, 'S_PUC_EFFECT_ENABLE', 1, 6),
-	(51, 'FAVORITE_CREW_ENABLE', 1, 6),
-	(52, 'TAMAADV_VALGENE_BONUS_ENABLE', 1, 6),
-	(53, 'DEMOLOOP_INFORMATION\\tdemo_info/250220_generator_pekora_demo.png', 1, 6),
-	(54, 'ULTIMATE_MATCH_PLAYABLE_ALWAYS', 0, 6),
-	(55, 'OVER_POWER_ENABLE', 0, 6);
+### music_db.xml
 
-/*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
-/*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
-/*!40014 SET FOREIGN_KEY_CHECKS=IFNULL(@OLD_FOREIGN_KEY_CHECKS, 1) */;
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40111 SET SQL_NOTES=IFNULL(@OLD_SQL_NOTES, 1) */;
+The KFC plugin loads `Data/Seed/music_db.xml` (shift_jis, ~8.4MB) into the `sv_music` table at startup. This file is NOT committed (too large). Provide it via docker-compose volume mount:
 
+```yaml
+volumes:
+  - ./StellaKFCPlugin/Data/Seed/music_db.xml:/app/Data/Seed/music_db.xml:ro
 ```
 
-## Deps
+Or place it in `StellaKFCPlugin/Data/Seed/music_db.xml` locally.
+
+## Manual Build & Run
+
+```bash
+# Clone with submodules (KBinXml.Net)
+git clone --recurse-submodules <repo-url>
+cd stella
+
+# Build
+dotnet build Stella.slnx
+
+# Run (default :80, override with ASPNETCORE_URLS)
+ASPNETCORE_URLS=http://+:8080 dotnet run --project Stella
+```
+
+## KFC Plugin — EXCEED GEAR + NABLA
+
+The KFC plugin serves both sv6 (EXCEED GEAR) and sv7 (NABLA) from unified handler classes. Each handler method branches on the game version derived from the e-amusement `model` string.
+
+### Static Data
+
+Static game data (events, courses, valgene, apigene, arena, extend, information, music_limited, ...) is stored in EF tables (`sv_static_*`) and seeded from `Data/Seed/asphyxia_data.json` — an extract of the asphyxia plugin's `data/exg.ts`, `data/nbl.ts`, `data/ii.ts`, `data/booth.ts`. Seeding is idempotent.
+
+### v6 → v7 Migration
+
+When a v6 (EXCEED GEAR) profile exists and v7 (NABLA) `new` is called, the plugin automatically migrates the profile: copies profile/items/params/scores, remaps clear lamps, recomputes volforce, and resets EX scores for charts Konami reset between versions.
+
+## Migrations
+
+```bash
+# Install dotnet-ef if not already
+dotnet tool install --global dotnet-ef --version 10.0.2
+
+# Add a migration
+dotnet ef migrations add <Name> --project StellaKFCPlugin --startup-project Stella.MigrationHelper
+
+# Apply to database
+dotnet ef database update --project StellaKFCPlugin --startup-project Stella.MigrationHelper
+```
+
+Or just run the server — `OnAppInitialize` calls `Database.Migrate()` automatically.
+
+## Credits
 
 Originally coded by [KBinXml.Net By Milkitic](https://github.com/Milkitic/KBinXml.Net)
 Stella coded to add types when serialization
