@@ -13,6 +13,7 @@ COPY CorePlugin/CorePlugin.csproj CorePlugin/
 COPY StellaKFCPlugin/StellaKFCPlugin.csproj StellaKFCPlugin/
 COPY Stella.MigrationHelper/Stella.MigrationHelper.csproj Stella.MigrationHelper/
 COPY TestClient/TestClient.csproj TestClient/
+COPY KBinXml.Net/src/KbinXml.Net/KbinXml.Net.csproj KBinXml.Net/src/KbinXml.Net/
 
 RUN dotnet restore Stella.slnx
 
@@ -48,9 +49,9 @@ COPY --from=build /app /app
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-EXPOSE 80
+EXPOSE 8080
 
-ENV ASPNETCORE_URLS=http://+:80
+ENV ASPNETCORE_URLS=http://+:8080
 ENV STELLA_KFC_DB="Server=db;Port=3306;User ID=stella;Password=stella;Database=stella_kfc"
 ENV STELLA_CORE_DB="Server=db;Port=3306;User ID=stella;Password=stella;Database=stella_core"
 

@@ -26,7 +26,7 @@ namespace Stella.Util
             XDocument document = XDocument.Parse(sb.ToString());
 
             // E-amusement error responses are always SHIFT-JIS encoded.
-            byte[] resData = KbinConverter.Write(document, KnownEncodings.ShiftJIS);
+            byte[] resData = KbinConverter.Write(document, KnownEncodings.ShiftJIS, new WriteOptions());
 
             string algo = "none";
 

@@ -87,5 +87,5 @@ done
 #      into sv_music.
 # ---------------------------------------------------------------------------
 cd /app
-echo "[entrypoint] starting Stella server on :80"
-exec dotnet Stella.dll --urls http://+:80
+echo "[entrypoint] starting Stella server on :8080"
+exec dotnet Stella.dll --urls http://+:8080

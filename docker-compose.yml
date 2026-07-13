@@ -45,8 +45,12 @@ services:
       STELLA_KFC_USE_BLASTERPASS: "true"
       STELLA_CORE_REGISTER_MODE: "true"
       STELLA_CORE_PRIVATE_MODE: "false"
+      # Server URL returned by services.get — the game uses this to reach all
+      # e-amusement endpoints. Set to the host's reachable address.
+      STELLA_SERVER_URL: "http://10.0.1.133:8080/eamuse"
+      STELLA_SERVER_HOST: "10.0.1.133"
     ports:
-      - "8080:80"
+      - "8080:8080"
     volumes:
       # Persist music_db.xml so users can drop a new one in without rebuilding.
       - ./StellaKFCPlugin/Data/Seed/music_db.xml:/app/Data/Seed/music_db.xml:ro

@@ -22,7 +22,7 @@ namespace Stella
 
             builder.Services.AddControllers();
 
-            builder.WebHost.UseUrls("http://+:80");
+            builder.WebHost.UseUrls(Environment.GetEnvironmentVariable("ASPNETCORE_URLS") ?? "http://+:80");
 
             var pluginService =
                 new PluginService(LoggerFactory.Create(x => x.AddConsole()).CreateLogger<PluginService>());
@@ -328,9 +328,9 @@ namespace Stella
                 // Console.WriteLine(document);
                 byte[] resData;
                 if (data.Encoding != null)
-                    resData = KbinConverter.Write(document, data.Encoding.ToKnownEncoding());
+                    resData = KbinConverter.Write(document, data.Encoding.ToKnownEncoding(), new WriteOptions());
                 else
-                    resData = KbinConverter.Write(document, KnownEncodings.ShiftJIS);
+                    resData = KbinConverter.Write(document, KnownEncodings.ShiftJIS, new WriteOptions());
 
                 // Console.WriteLine(KbinConverter.ReadXmlLinq(resData));
 
