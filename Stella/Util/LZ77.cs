@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace Stella.Util
 {
@@ -7,9 +8,19 @@ namespace Stella.Util
     {
         private const int minLength = 3;
 
-        public static byte[] Decompress(byte[] data)
+        // Upper bound on decompressed output. e-amusement payloads are small (a few KB),
+        // so 16 MiB is generous while still preventing zip-bomb style memory exhaustion.
+        private const int MaxDecompressedSize = 16 * 1024 * 1024;
+
+        public static byte[] Decompress(byte[] data, int maxOutputSize = MaxDecompressedSize)
         {
-            List<byte> res = new List<byte>();
+            if (data == null) throw new ArgumentNullException(nameof(data));
+            if (maxOutputSize <= 0) throw new ArgumentOutOfRangeException(nameof(maxOutputSize));
+
+            // Start with a reasonable buffer and grow on demand (capped at maxOutputSize).
+            byte[] res = new byte[Math.Min(maxOutputSize, Math.Max(data.Length * 4, 1024))];
+            int resLen = 0;
+
             int pos = 0;
             int state = 0;
 
@@ -17,14 +28,25 @@ namespace Stella.Util
             {
                 state >>= 1;
                 if (state <= 1)
+                {
+                    if (pos >= data.Length) break;
                     state = data[pos++] | 0x100;
+                }
 
                 if ((state & 1) != 0)
                 {
-                    res.Add(data[pos++]);
+                    // Literal byte
+                    if (pos >= data.Length) break;
+                    if (resLen >= maxOutputSize)
+                        throw new InvalidDataException("LZ77 decompressed output exceeds the maximum allowed size.");
+                    if (resLen >= res.Length)
+                        Array.Resize(ref res, Math.Min(res.Length * 2, maxOutputSize));
+                    res[resLen++] = data[pos++];
                 }
                 else
                 {
+                    // Back-reference: needs two bytes
+                    if (pos + 1 >= data.Length) break;
                     byte byte1 = data[pos++];
                     byte byte2 = data[pos++];
 
@@ -34,16 +56,22 @@ namespace Stella.Util
                     if (distance == 0)
                         break;
 
-                    int resPos = res.Count;
+                    if (resLen + length > maxOutputSize)
+                        throw new InvalidDataException("LZ77 decompressed output exceeds the maximum allowed size.");
+
+                    while (res.Length < resLen + length)
+                        Array.Resize(ref res, Math.Min(res.Length * 2, maxOutputSize));
+
                     for (int i = 0; i < length; ++i)
                     {
-                        int o = resPos - distance + i;
-                        res.Add((o < 0) ? (byte)0 : res[o]);
+                        int o = resLen - distance + i;
+                        res[resLen++] = (o < 0) ? (byte)0 : res[o];
                     }
                 }
             }
 
-            return res.ToArray();
+            Array.Resize(ref res, resLen);
+            return res;
         }
 
         private struct Match

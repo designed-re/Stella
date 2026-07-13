@@ -9,7 +9,11 @@ namespace Stella.MigrationHelper
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-            builder.Services.AddDbContext<StellaKFCPlugin.EF.StellaKFCContext>(x=> x.UseMySql("server=localhost;database=stella;user id=stella;password=stella", new MariaDbServerVersion(ServerVersion.AutoDetect("server=localhost;database=stella;user id=stella;password=stella"))));
+            // The connection string is resolved via StellaKFCContext.ResolveConfiguration(),
+            // which prefers the STELLA_KFC_DB environment variable and falls back to
+            // plugins/plugin_kfc.json. Avoid hardcoding credentials here.
+            var (kfcConnStr, kfcServerVersion) = StellaKFCPlugin.EF.StellaKFCContext.ResolveConfiguration();
+            builder.Services.AddDbContext<StellaKFCPlugin.EF.StellaKFCContext>(x => x.UseMySql(kfcConnStr, kfcServerVersion));
             builder.Services.AddControllers();
 
             var app = builder.Build();

@@ -30,6 +30,12 @@ public partial class SvScore
 
     public int VolRate { get; set; }
 
+    public int Volforce { get; set; }
+
+    public int PlayCount { get; set; }
+
+    public int DbVer { get; set; }
+
     public int Version { get; set; }
 
     public virtual SvMusic Music { get; set; } = null!;

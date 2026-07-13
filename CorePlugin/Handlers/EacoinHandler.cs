@@ -15,7 +15,7 @@ namespace CorePlugin.Handlers
         public async Task<CheckInResponse> CheckIn()
         {
             var request = Request as CheckInRequest;
-            var context = new CoreContext();
+            using var context = new CoreContext();
 
             try
             {
@@ -54,11 +54,7 @@ namespace CorePlugin.Handlers
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Error in eacoin.checkin");
-                throw new StellaHandlerException(500);
-            }
-            finally
-            {
-                context.Dispose();
+                throw new StellaHandlerException(StellaHandlerException.InternalErrorCode);
             }
         }
 
@@ -66,7 +62,7 @@ namespace CorePlugin.Handlers
         public async Task<ConsumeResponse> Consume()
         {
             var request = Request as ConsumeRequest;
-            var context = new CoreContext();
+            using var context = new CoreContext();
 
             try
             {
@@ -101,11 +97,7 @@ namespace CorePlugin.Handlers
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Error in eacoin.consume");
-                throw new StellaHandlerException(500);
-            }
-            finally
-            {
-                context.Dispose();
+                throw new StellaHandlerException(StellaHandlerException.InternalErrorCode);
             }
         }
     }

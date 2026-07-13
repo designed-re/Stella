@@ -96,6 +96,12 @@ namespace StellaKFCPlugin.Models
         [XmlElement(ElementName = "skill_name_id")]
         public short SkillNameId { get; set; }
 
+        [XmlElement(ElementName = "skill_type")]
+        public short SkillType { get; set; }
+
+        [XmlElement(ElementName = "support_team_id")]
+        public int SupportTeamId { get; set; }
+
         [XmlElement(ElementName = "ea_shop")]
         public EaShop EaShop { get; set; } = new();
 
@@ -146,6 +152,153 @@ namespace StellaKFCPlugin.Models
 
         [XmlElement(ElementName = "valgene_ticket")]
         public ValgeneTicket ValgeneTicket { get; set; } = new();
+
+        [XmlElement(ElementName = "present")]
+        public PresentElement Present { get; set; } = new();
+
+        [XmlElement(ElementName = "arena")]
+        public LoadArenaElement? Arena { get; set; }
+
+        [XmlElement(ElementName = "variant_gate")]
+        public VariantGateElement? VariantGate { get; set; }
+
+        [XmlElement(ElementName = "creator_item")]
+        public CreatorItemElement? CreatorItem { get; set; }
+
+        [XmlElement(ElementName = "additional_info")]
+        public AdditionalInfoElement? AdditionalInfo { get; set; }
+
+        [XmlElement(ElementName = "weekly_music")]
+        public List<LoadWeeklyMusic> WeeklyMusic { get; set; } = new();
+    }
+
+    [XmlRoot(ElementName = "present")]
+    public class PresentElement
+    {
+        [XmlElement(ElementName = "info")]
+        public List<PresentInfo> Infos { get; set; } = new();
+    }
+
+    [XmlRoot(ElementName = "info")]
+    public class PresentInfo
+    {
+        [XmlElement(ElementName = "type")]
+        public byte Type { get; set; }
+
+        [XmlElement(ElementName = "id")]
+        public uint Id { get; set; }
+
+        [XmlElement(ElementName = "param")]
+        public uint Param { get; set; }
+    }
+
+    [XmlRoot(ElementName = "arena")]
+    public class LoadArenaElement
+    {
+        [XmlElement(ElementName = "last_play_season")]
+        public int LastPlaySeason { get; set; }
+
+        [XmlElement(ElementName = "rank_point")]
+        public int RankPoint { get; set; }
+
+        [XmlElement(ElementName = "shop_point")]
+        public int ShopPoint { get; set; }
+
+        [XmlElement(ElementName = "ultimate_rate")]
+        public int UltimateRate { get; set; }
+
+        [XmlElement(ElementName = "ultimate_rank_num")]
+        public int UltimateRankNum { get; set; }
+
+        [XmlElement(ElementName = "megamix_rate")]
+        public int MegamixRate { get; set; }
+
+        [XmlElement(ElementName = "rank_play_cnt")]
+        public int RankPlayCnt { get; set; }
+
+        [XmlElement(ElementName = "ultimate_play_cnt")]
+        public int UltimatePlayCnt { get; set; }
+    }
+
+    [XmlRoot(ElementName = "variant_gate")]
+    public class VariantGateElement
+    {
+        [XmlElement(ElementName = "power")]
+        public int Power { get; set; }
+
+        [XmlElement(ElementName = "over_radar")]
+        public string OverRadar { get; set; } = string.Empty;
+
+        [XmlElement(ElementName = "element")]
+        public VariantElement Element { get; set; } = new();
+    }
+
+    [XmlRoot(ElementName = "element")]
+    public class VariantElement
+    {
+        [XmlElement(ElementName = "notes")]
+        public int Notes { get; set; }
+
+        [XmlElement(ElementName = "peak")]
+        public int Peak { get; set; }
+
+        [XmlElement(ElementName = "tsumami")]
+        public int Tsumami { get; set; }
+
+        [XmlElement(ElementName = "tricky")]
+        public int Tricky { get; set; }
+
+        [XmlElement(ElementName = "onehand")]
+        public int Onehand { get; set; }
+
+        [XmlElement(ElementName = "handtrip")]
+        public int Handtrip { get; set; }
+    }
+
+    [XmlRoot(ElementName = "creator_item")]
+    public class CreatorItemElement
+    {
+        [XmlElement(ElementName = "info")]
+        public CreatorItemInfo Info { get; set; } = new();
+    }
+
+    [XmlRoot(ElementName = "info")]
+    public class CreatorItemInfo
+    {
+        [XmlElement(ElementName = "creator_type")]
+        public uint CreatorType { get; set; }
+
+        [XmlElement(ElementName = "item_id")]
+        public uint ItemId { get; set; }
+
+        [XmlElement(ElementName = "param")]
+        public uint Param { get; set; }
+    }
+
+    [XmlRoot(ElementName = "additional_info")]
+    public class AdditionalInfoElement
+    {
+        [XmlElement(ElementName = "pro_team_id")]
+        public string ProTeamId { get; set; } = string.Empty;
+    }
+
+    [XmlRoot(ElementName = "weekly_music")]
+    public class LoadWeeklyMusic
+    {
+        [XmlElement(ElementName = "week_id")]
+        public int WeekId { get; set; }
+
+        [XmlElement(ElementName = "music_id")]
+        public int MusicId { get; set; }
+
+        [XmlElement(ElementName = "music_type")]
+        public int MusicType { get; set; }
+
+        [XmlElement(ElementName = "exscore")]
+        public uint Exscore { get; set; }
+
+        [XmlElement(ElementName = "rank")]
+        public int Rank { get; set; }
     }
 
     [XmlRoot(ElementName = "ea_shop")]

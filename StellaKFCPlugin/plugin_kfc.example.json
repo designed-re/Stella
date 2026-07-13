@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "maintenance": false,
+  "db": "server=localhost;database=stella;user id=stella_user;password=CHANGE_ME",
+  "unlock_all_songs": true,
+  "arena_open": true,
+  "arena_no_endtime": true,
+  "arena_session": 22,
+  "arena_station": "None",
+  "unlock_all_navigators": false,
+  "unlock_all_appeal_cards": false,
+  "unlock_all_valk_items": false,
+  "use_blasterpass": true
+}

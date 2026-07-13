@@ -24,6 +24,938 @@ namespace StellaKFCPlugin.Migrations
             MySqlModelBuilderExtensions.HasCharSet(modelBuilder, "utf8mb4");
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvApigeneCatalog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ApigeneId")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("apigene_id");
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("item_id");
+
+                    b.Property<int>("ItemType")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("item_type");
+
+                    b.Property<int>("Rarity")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("rarity");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Version", "ApigeneId" }, "idx_version_apigene_id");
+
+                    b.ToTable("sv_static_apigene_catalog", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvApigeneData", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ApigeneId")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("apigene_id");
+
+                    b.Property<int>("CommonRate")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("common_rate");
+
+                    b.Property<int>("MinVersion")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("min_version");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NameEnglish")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)")
+                        .HasColumnName("name_english");
+
+                    b.Property<bool>("NoDuplicate")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("no_duplicate");
+
+                    b.Property<int>("Price")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("price");
+
+                    b.Property<int>("RareRate")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("rare_rate");
+
+                    b.Property<int>("UncommonRate")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("uncommon_rate");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Version", "ApigeneId" }, "idx_version_apigene_id")
+                        .HasDatabaseName("idx_version_apigene_id1");
+
+                    b.ToTable("sv_static_apigene", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvAprilFoolsSong", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("MusicId")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("music_id");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Version", "MusicId" }, "idx_version_music_id");
+
+                    b.ToTable("sv_static_april_fools_song", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvArenaStationItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ItemsJson")
+                        .IsRequired()
+                        .HasMaxLength(-1)
+                        .HasColumnType("longtext")
+                        .HasColumnName("items_json");
+
+                    b.Property<int>("MinVersion")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("min_version");
+
+                    b.Property<string>("SetName")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("set_name");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Version", "SetName" }, "idx_version_set_name");
+
+                    b.ToTable("sv_static_arena_station", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvCourseData", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CoursesJson")
+                        .IsRequired()
+                        .HasMaxLength(-1)
+                        .HasColumnType("longtext")
+                        .HasColumnName("courses_json");
+
+                    b.Property<short>("HasGod")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("smallint(6)")
+                        .HasDefaultValue((short)0)
+                        .HasColumnName("has_god");
+
+                    b.Property<bool>("IsNew")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_new");
+
+                    b.Property<int>("MinVersion")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("min_version");
+
+                    b.Property<int>("SeriesId")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("series_id");
+
+                    b.Property<string>("SeriesName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)")
+                        .HasColumnName("series_name");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Version", "SeriesId" }, "idx_version_series");
+
+                    b.ToTable("sv_static_course", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvCurrentArena", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<short>("RankMatchTarget")
+                        .HasColumnType("smallint(6)")
+                        .HasColumnName("rank_match_target");
+
+                    b.Property<short>("Rule")
+                        .HasColumnType("smallint(6)")
+                        .HasColumnName("rule");
+
+                    b.Property<int>("Season")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("season");
+
+                    b.Property<long>("ShopEnd")
+                        .HasColumnType("bigint(20)")
+                        .HasColumnName("shop_end");
+
+                    b.Property<long>("ShopStart")
+                        .HasColumnType("bigint(20)")
+                        .HasColumnName("shop_start");
+
+                    b.Property<long>("TimeEnd")
+                        .HasColumnType("bigint(20)")
+                        .HasColumnName("time_end");
+
+                    b.Property<long>("TimeStart")
+                        .HasColumnType("bigint(20)")
+                        .HasColumnName("time_start");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Version" }, "idx_version");
+
+                    b.ToTable("sv_static_current_arena", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvEgSongLocked", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("category");
+
+                    b.Property<int>("MusicId")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("music_id");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Version", "Category" }, "idx_version_category");
+
+                    b.ToTable("sv_static_eg_song_locked", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvEventData", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("EventId")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("event_id");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("sort_order");
+
+                    b.Property<string>("ToggleKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("toggle_key");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Version", "SortOrder" }, "idx_version_sort");
+
+                    b.ToTable("sv_static_event", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvExtendData", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<uint>("ExtendId")
+                        .HasColumnType("int(10) unsigned")
+                        .HasColumnName("extend_id");
+
+                    b.Property<uint>("ExtendType")
+                        .HasColumnType("int(10) unsigned")
+                        .HasColumnName("extend_type");
+
+                    b.Property<int>("MinVersion")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("min_version");
+
+                    b.Property<int>("ParamNum1")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("param_num_1");
+
+                    b.Property<int>("ParamNum2")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("param_num_2");
+
+                    b.Property<int>("ParamNum3")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("param_num_3");
+
+                    b.Property<int>("ParamNum4")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("param_num_4");
+
+                    b.Property<int>("ParamNum5")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("param_num_5");
+
+                    b.Property<string>("ParamStr1")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("param_str_1");
+
+                    b.Property<string>("ParamStr2")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("param_str_2");
+
+                    b.Property<string>("ParamStr3")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("param_str_3");
+
+                    b.Property<string>("ParamStr4")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("param_str_4");
+
+                    b.Property<string>("ParamStr5")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("param_str_5");
+
+                    b.Property<int>("StartDate")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("start_date");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Version", "ExtendId" }, "idx_version_extend_id");
+
+                    b.ToTable("sv_static_extend", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvHaveNote", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("NoteId")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("note_id");
+
+                    b.Property<int>("Param")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("param");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "NoteId", "Param" }, "idx_note_param");
+
+                    b.ToTable("sv_static_have_note", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvInformationData", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("InfoId")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("info_id");
+
+                    b.Property<string>("InfoStr")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("info_str");
+
+                    b.Property<int>("MinVersion")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("min_version");
+
+                    b.Property<int>("StartDate")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("start_date");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Version", "InfoId" }, "idx_version_info_id");
+
+                    b.ToTable("sv_static_information", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvLicensedSong", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("MusicId")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("music_id");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Version", "MusicId" }, "idx_version_music_id")
+                        .HasDatabaseName("idx_version_music_id1");
+
+                    b.ToTable("sv_static_licensed_song", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvMegamixData", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("MegamixNo")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("megamix_no");
+
+                    b.Property<string>("SongIds")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("song_ids");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Version", "MegamixNo" }, "idx_version_megamix_no");
+
+                    b.ToTable("sv_static_megamix", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvMusicOverride", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ChartsJson")
+                        .IsRequired()
+                        .HasMaxLength(-1)
+                        .HasColumnType("longtext")
+                        .HasColumnName("charts_json");
+
+                    b.Property<string>("InfoJson")
+                        .IsRequired()
+                        .HasMaxLength(-1)
+                        .HasColumnType("longtext")
+                        .HasColumnName("info_json");
+
+                    b.Property<int>("MusicId")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("music_id");
+
+                    b.Property<int>("StartDate")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("start_date");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Version", "MusicId" }, "idx_version_music_id")
+                        .HasDatabaseName("idx_version_music_id2");
+
+                    b.ToTable("sv_static_music_override", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvPolicyBreakData", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<long>("EndDate")
+                        .HasColumnType("bigint(20)")
+                        .HasColumnName("end_date");
+
+                    b.Property<int>("Pbid")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("pb_id");
+
+                    b.Property<int>("RwrdId")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("rwrd_id");
+
+                    b.Property<int>("RwrdParam")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("rwrd_param");
+
+                    b.Property<int>("RwrdType")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("rwrd_type");
+
+                    b.Property<long>("StartDate")
+                        .HasColumnType("bigint(20)")
+                        .HasColumnName("start_date");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Version", "Pbid" }, "idx_version_pbid");
+
+                    b.ToTable("sv_static_policy_break", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvUnlockEventData", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("DataJson")
+                        .IsRequired()
+                        .HasMaxLength(-1)
+                        .HasColumnType("longtext")
+                        .HasColumnName("data_json");
+
+                    b.Property<string>("EventId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("event_id");
+
+                    b.Property<string>("ItemsJson")
+                        .HasMaxLength(-1)
+                        .HasColumnType("longtext")
+                        .HasColumnName("items_json");
+
+                    b.Property<int>("MinVersion")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("min_version");
+
+                    b.Property<string>("SettingsJson")
+                        .HasMaxLength(-1)
+                        .HasColumnType("longtext")
+                        .HasColumnName("settings_json");
+
+                    b.Property<int>("StartDate")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("start_date");
+
+                    b.Property<string>("TogglesJson")
+                        .HasMaxLength(-1)
+                        .HasColumnType("longtext")
+                        .HasColumnName("toggles_json");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)")
+                        .HasColumnName("type");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Version", "EventId" }, "idx_version_event_id");
+
+                    b.ToTable("sv_static_unlock_event", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvValgeneCatalog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("item_id");
+
+                    b.Property<int>("ItemType")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("item_type");
+
+                    b.Property<int>("Rarity")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("rarity");
+
+                    b.Property<int>("ValgeneId")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("valgene_id");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Version", "ValgeneId" }, "idx_version_valgene_id");
+
+                    b.ToTable("sv_static_valgene_catalog", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvValgeneData", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("MinVersion")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("min_version");
+
+                    b.Property<int>("ValgeneId")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("valgene_id");
+
+                    b.Property<string>("ValgeneName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)")
+                        .HasColumnName("valgene_name");
+
+                    b.Property<string>("ValgeneNameEnglish")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)")
+                        .HasColumnName("valgene_name_english");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Version", "ValgeneId" }, "idx_version_valgene_id")
+                        .HasDatabaseName("idx_version_valgene_id1");
+
+                    b.ToTable("sv_static_valgene", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvValkyrieSong", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("MusicId")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("music_id");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Version", "MusicId" }, "idx_version_music_id")
+                        .HasDatabaseName("idx_version_music_id3");
+
+                    b.ToTable("sv_static_valkyrie_song", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvWeeklyMusic", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<long>("End")
+                        .HasColumnType("bigint(20)")
+                        .HasColumnName("end");
+
+                    b.Property<int>("MusicId")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("music_id");
+
+                    b.Property<long>("Start")
+                        .HasColumnType("bigint(20)")
+                        .HasColumnName("start");
+
+                    b.Property<int>("WeekId")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("week_id");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "WeekId" }, "idx_week_id");
+
+                    b.ToTable("sv_static_weekly_music", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.SvArena", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("LiveEnergy")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("live_energy");
+
+                    b.Property<int>("MegamixRate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("megamix_rate");
+
+                    b.Property<int>("Profile")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("profile");
+
+                    b.Property<int>("RankCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("rank_count");
+
+                    b.Property<int>("RankPoint")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("rank_point");
+
+                    b.Property<int>("Season")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("season");
+
+                    b.Property<int>("ShopPoint")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("shop_point");
+
+                    b.Property<int>("UltimateCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("ultimate_count");
+
+                    b.Property<int>("UltimateRankNum")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("ultimate_rank_num");
+
+                    b.Property<int>("UltimateRate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("ultimate_rate");
+
+                    b.Property<int>("Version")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(6)
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Profile" }, "FK_arena_profile_to_profile(id)");
+
+                    b.HasIndex(new[] { "Profile", "Season", "Version" }, "idx_profile_season_version");
+
+                    b.ToTable("sv_arena", null, t =>
+                        {
+                            t.HasComment("Data store(Arena) for Sound Voltex");
+                        });
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.SvCounter", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)")
+                        .HasColumnName("key");
+
+                    b.Property<int>("Value")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("value");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Key" }, "idx_key")
+                        .IsUnique();
+
+                    b.ToTable("sv_counter", null, t =>
+                        {
+                            t.HasComment("Data store(Counter) for Sound Voltex");
+                        });
+                });
+
             modelBuilder.Entity("StellaKFCPlugin.EF.SvCourseRecord", b =>
                 {
                     b.Property<int>("Id")
@@ -45,9 +977,23 @@ namespace StellaKFCPlugin.Migrations
                         .HasColumnType("int(11)")
                         .HasColumnName("course_id");
 
+                    b.Property<int>("Exscore")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("exscore");
+
                     b.Property<int>("Grade")
                         .HasColumnType("int(11)")
                         .HasColumnName("grade");
+
+                    b.Property<string>("KacId")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("kac_id")
+                        .HasDefaultValueSql("''");
 
                     b.Property<int>("Profile")
                         .HasColumnType("int(11)")
@@ -64,6 +1010,12 @@ namespace StellaKFCPlugin.Migrations
                     b.Property<int>("SeriesId")
                         .HasColumnType("int(11)")
                         .HasColumnName("series_id");
+
+                    b.Property<short>("SkillType")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("smallint(6)")
+                        .HasDefaultValue((short)0)
+                        .HasColumnName("skill_type");
 
                     b.Property<int>("Version")
                         .ValueGeneratedOnAdd()
@@ -340,6 +1292,49 @@ namespace StellaKFCPlugin.Migrations
                         });
                 });
 
+            modelBuilder.Entity("StellaKFCPlugin.EF.SvPolicyBreak", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Exp")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("exp");
+
+                    b.Property<int>("Id1")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("pb_id");
+
+                    b.Property<string>("RefId")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("char(16)")
+                        .HasColumnName("ref_id")
+                        .IsFixedLength();
+
+                    b.Property<int>("Version")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(2)
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "RefId", "Version", "Id1" }, "idx_refid_version_id");
+
+                    b.ToTable("sv_policy_break", null, t =>
+                        {
+                            t.HasComment("Data store(Policy Break) for Sound Voltex");
+                        });
+                });
+
             modelBuilder.Entity("StellaKFCPlugin.EF.SvProfile", b =>
                 {
                     b.Property<int>("Id")
@@ -348,6 +1343,12 @@ namespace StellaKFCPlugin.Migrations
                         .HasColumnName("id");
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Akaname")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("akaname");
 
                     b.Property<ushort>("AppealId")
                         .HasColumnType("smallint(5) unsigned")
@@ -377,6 +1378,12 @@ namespace StellaKFCPlugin.Migrations
                         .HasColumnType("bigint(20) unsigned")
                         .HasColumnName("blaster_pass_limit_date");
 
+                    b.Property<int>("BplSupport")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("bpl_support");
+
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(10)
@@ -384,9 +1391,27 @@ namespace StellaKFCPlugin.Migrations
                         .HasColumnName("code")
                         .IsFixedLength();
 
+                    b.Property<int>("CreatorItem")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("creator_item");
+
+                    b.Property<int>("Datecode")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("datecode");
+
                     b.Property<uint>("DayCount")
                         .HasColumnType("int(10) unsigned")
                         .HasColumnName("day_count");
+
+                    b.Property<int>("DbVer")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("dbver");
 
                     b.Property<int>("DrawAdjust")
                         .HasColumnType("int(11)")
@@ -479,6 +1504,12 @@ namespace StellaKFCPlugin.Migrations
                         .HasColumnType("int(10) unsigned")
                         .HasColumnName("play_count");
 
+                    b.Property<int>("PluginVer")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("plugin_ver");
+
                     b.Property<string>("RefId")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -547,8 +1578,10 @@ namespace StellaKFCPlugin.Migrations
                     b.HasKey("Id")
                         .HasName("PRIMARY");
 
-                    b.HasIndex(new[] { "RefId" }, "refid")
+                    b.HasIndex(new[] { "RefId", "Version" }, "idx_refid_version")
                         .IsUnique();
+
+                    b.HasIndex(new[] { "RefId" }, "refid");
 
                     b.ToTable("sv_profile", null, t =>
                         {
@@ -607,7 +1640,8 @@ namespace StellaKFCPlugin.Migrations
 
                     b.HasIndex("ProfileNavigationId");
 
-                    b.HasIndex(new[] { "RefId", "Version" }, "idx_refid_version");
+                    b.HasIndex(new[] { "RefId", "Version" }, "idx_refid_version")
+                        .HasDatabaseName("idx_refid_version1");
 
                     b.ToTable("sv_rivals", null, t =>
                         {
@@ -632,6 +1666,12 @@ namespace StellaKFCPlugin.Migrations
                         .HasColumnType("int(11)")
                         .HasColumnName("clear");
 
+                    b.Property<int>("DbVer")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("dbver");
+
                     b.Property<int>("Exscore")
                         .HasColumnType("int(11)")
                         .HasColumnName("exscore");
@@ -647,6 +1687,12 @@ namespace StellaKFCPlugin.Migrations
                     b.Property<int>("MusicId")
                         .HasColumnType("int(11)")
                         .HasColumnName("music_id");
+
+                    b.Property<int>("PlayCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("play_count");
 
                     b.Property<int>("Profile")
                         .HasColumnType("int(11)")
@@ -670,6 +1716,12 @@ namespace StellaKFCPlugin.Migrations
                         .HasColumnType("int(11)")
                         .HasColumnName("volRate");
 
+                    b.Property<int>("Volforce")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("volforce");
+
                     b.HasKey("Id")
                         .HasName("PRIMARY");
 
@@ -680,6 +1732,62 @@ namespace StellaKFCPlugin.Migrations
                     b.ToTable("sv_scores", null, t =>
                         {
                             t.HasComment("Data store(Scores) for Sound Voltex");
+                        });
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.SvSkill", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<short>("Base")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("smallint(6)")
+                        .HasDefaultValue((short)0)
+                        .HasColumnName("base");
+
+                    b.Property<short>("Level")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("smallint(6)")
+                        .HasDefaultValue((short)0)
+                        .HasColumnName("level");
+
+                    b.Property<short>("Name")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("smallint(6)")
+                        .HasDefaultValue((short)0)
+                        .HasColumnName("name");
+
+                    b.Property<int>("Profile")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("profile");
+
+                    b.Property<short>("Type")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("smallint(6)")
+                        .HasDefaultValue((short)0)
+                        .HasColumnName("type");
+
+                    b.Property<int>("Version")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(6)
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Profile" }, "FK_skill_profile_to_profile(id)");
+
+                    b.HasIndex(new[] { "Profile", "Version" }, "idx_profile_version");
+
+                    b.ToTable("sv_skill", null, t =>
+                        {
+                            t.HasComment("Data store(Skill) for Sound Voltex");
                         });
                 });
 
@@ -713,6 +1821,171 @@ namespace StellaKFCPlugin.Migrations
                         {
                             t.HasComment("Data store(Valgene Tickets) for Sound Voltex");
                         });
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.SvVariantPower", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Handtrip")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("handtrip");
+
+                    b.Property<int>("Notes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("notes");
+
+                    b.Property<int>("Onehand")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("onehand");
+
+                    b.Property<string>("OverRadar")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(-1)
+                        .HasColumnType("longtext")
+                        .HasColumnName("over_radar")
+                        .HasDefaultValueSql("''");
+
+                    b.Property<int>("Peak")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("peak");
+
+                    b.Property<int>("Power")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("power");
+
+                    b.Property<int>("Profile")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("profile");
+
+                    b.Property<int>("Tricky")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("tricky");
+
+                    b.Property<int>("Tsumami")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("tsumami");
+
+                    b.Property<int>("Version")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(6)
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Profile" }, "FK_variant_profile_to_profile(id)");
+
+                    b.HasIndex(new[] { "Profile", "Version" }, "idx_profile_version")
+                        .HasDatabaseName("idx_profile_version1");
+
+                    b.ToTable("sv_variant_power", null, t =>
+                        {
+                            t.HasComment("Data store(Variant Power) for Sound Voltex");
+                        });
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.SvWeeklyMusicScore", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Exscore")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("exscore");
+
+                    b.Property<int>("HiscoreCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("hiscore_count");
+
+                    b.Property<int>("Mid")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("mid");
+
+                    b.Property<int>("Mtype")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("mtype");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("varchar(8)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("PlayCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("play_count");
+
+                    b.Property<string>("RefId")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("char(16)")
+                        .HasColumnName("ref_id")
+                        .IsFixedLength();
+
+                    b.Property<int>("Version")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(6)
+                        .HasColumnName("version");
+
+                    b.Property<int>("Week")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("week");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Week", "Mid", "Mtype", "Version", "Exscore" }, "idx_rank_list");
+
+                    b.HasIndex(new[] { "Week", "Mid", "Mtype", "Version" }, "idx_week_mid_mtype_version");
+
+                    b.ToTable("sv_weekly_music_score", null, t =>
+                        {
+                            t.HasComment("Data store(Weekly Music Score) for Sound Voltex");
+                        });
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.SvArena", b =>
+                {
+                    b.HasOne("StellaKFCPlugin.EF.SvProfile", "ProfileNavigation")
+                        .WithMany("SvArenas")
+                        .HasForeignKey("Profile")
+                        .IsRequired()
+                        .HasConstraintName("FK_arena_profile_to_profile(id)");
+
+                    b.Navigation("ProfileNavigation");
                 });
 
             modelBuilder.Entity("StellaKFCPlugin.EF.SvCourseRecord", b =>
@@ -786,6 +2059,17 @@ namespace StellaKFCPlugin.Migrations
                     b.Navigation("ProfileNavigation");
                 });
 
+            modelBuilder.Entity("StellaKFCPlugin.EF.SvSkill", b =>
+                {
+                    b.HasOne("StellaKFCPlugin.EF.SvProfile", "ProfileNavigation")
+                        .WithMany("SvSkills")
+                        .HasForeignKey("Profile")
+                        .IsRequired()
+                        .HasConstraintName("FK_skill_profile_to_profile(id)");
+
+                    b.Navigation("ProfileNavigation");
+                });
+
             modelBuilder.Entity("StellaKFCPlugin.EF.SvValgeneTicket", b =>
                 {
                     b.HasOne("StellaKFCPlugin.EF.SvProfile", "ProfileNavigation")
@@ -797,6 +2081,17 @@ namespace StellaKFCPlugin.Migrations
                     b.Navigation("ProfileNavigation");
                 });
 
+            modelBuilder.Entity("StellaKFCPlugin.EF.SvVariantPower", b =>
+                {
+                    b.HasOne("StellaKFCPlugin.EF.SvProfile", "ProfileNavigation")
+                        .WithMany("SvVariantPowers")
+                        .HasForeignKey("Profile")
+                        .IsRequired()
+                        .HasConstraintName("FK_variant_profile_to_profile(id)");
+
+                    b.Navigation("ProfileNavigation");
+                });
+
             modelBuilder.Entity("StellaKFCPlugin.EF.SvMusic", b =>
                 {
                     b.Navigation("SvScores");
@@ -804,6 +2099,8 @@ namespace StellaKFCPlugin.Migrations
 
             modelBuilder.Entity("StellaKFCPlugin.EF.SvProfile", b =>
                 {
+                    b.Navigation("SvArenas");
+
                     b.Navigation("SvCourseRecords");
 
                     b.Navigation("SvItems");
@@ -814,7 +2111,11 @@ namespace StellaKFCPlugin.Migrations
 
                     b.Navigation("SvScores");
 
+                    b.Navigation("SvSkills");
+
                     b.Navigation("SvValgeneTickets");
+
+                    b.Navigation("SvVariantPowers");
                 });
 #pragma warning restore 612, 618
         }

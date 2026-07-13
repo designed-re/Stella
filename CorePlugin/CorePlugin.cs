@@ -19,11 +19,22 @@ namespace CorePlugin
 
         public Task OnBuilderInitialize(WebApplicationBuilder builder)
         {
-            var config = new ConfigurationBuilder().AddJsonFile(Path.Combine(Directory.GetCurrentDirectory(),"plugins","plugin_core.json")).Build();
-            var coreConfig = config.Get<CorePluginConfig>();
+            var config = new ConfigurationBuilder()
+                .AddJsonFile(Path.Combine(Directory.GetCurrentDirectory(), "plugins", "plugin_core.json"), optional: true)
+                .Build();
+            var coreConfig = config.Get<CorePluginConfig>() ?? new CorePluginConfig();
+
+            // Allow overriding the DB connection string via the STELLA_CORE_DB
+            // environment variable so credentials do not have to be committed in
+            // plugin_core.json.
+            var envConn = Environment.GetEnvironmentVariable("STELLA_CORE_DB");
+            if (!string.IsNullOrWhiteSpace(envConn))
+                coreConfig.DbConnectionString = envConn;
+
             PluginConfig = coreConfig;
-          builder.Services.AddDbContext<CoreContext>(x => x.UseMySql(coreConfig.DbConnectionString,
-               new MariaDbServerVersion(ServerVersion.AutoDetect(coreConfig.DbConnectionString))));
+
+            var (connStr, serverVersion) = CoreContext.ResolveConfiguration();
+            builder.Services.AddDbContext<CoreContext>(x => x.UseMySql(connStr, serverVersion));
             return Task.CompletedTask;
         }
 

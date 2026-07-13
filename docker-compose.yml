@@ -1,0 +1,56 @@
+# docker-compose for Stella — brings up MariaDB, applies EF migrations, seeds
+# static data, and runs the Stella server. Suitable for a fresh clone.
+#
+# Usage:
+#   docker compose up --build
+#
+# The server listens on http://localhost:8080. Override DB credentials and
+# plugin config via the environment section.
+
+services:
+  db:
+    image: mariadb:11
+    environment:
+      MARIADB_ROOT_PASSWORD: stella
+      MARIADB_DATABASE: stella_kfc
+      MARIADB_USER: stella
+      MARIADB_PASSWORD: stella
+    volumes:
+      - stella-db:/var/lib/mysql
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  stella:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Connection strings — the host is `db` (the compose service name).
+      STELLA_KFC_DB: "Server=db;Port=3306;User ID=stella;Password=stella;Database=stella_kfc"
+      STELLA_CORE_DB: "Server=db;Port=3306;User ID=stella;Password=stella;Database=stella_core"
+      # Plugin toggles
+      STELLA_KFC_UNLOCK_ALL_SONGS: "true"
+      STELLA_KFC_ARENA_OPEN: "true"
+      STELLA_KFC_ARENA_NO_ENDTIME: "true"
+      STELLA_KFC_ARENA_SESSION: "22"
+      STELLA_KFC_ARENA_STATION: "None"
+      STELLA_KFC_USE_BLASTERPASS: "true"
+      STELLA_CORE_REGISTER_MODE: "true"
+      STELLA_CORE_PRIVATE_MODE: "false"
+    ports:
+      - "8080:80"
+    volumes:
+      # Persist music_db.xml so users can drop a new one in without rebuilding.
+      - ./StellaKFCPlugin/Data/Seed/music_db.xml:/app/Data/Seed/music_db.xml:ro
+    restart: unless-stopped
+
+volumes:
+  stella-db:
