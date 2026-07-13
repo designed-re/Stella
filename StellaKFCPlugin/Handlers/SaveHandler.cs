@@ -67,49 +67,53 @@ namespace StellaKFCPlugin.Handlers
             var profile = await db.SvProfiles.SingleOrDefaultAsync(x => x.RefId == request.RefId && x.Version == gameVersion);
             if (profile is null) { response.Status = "1"; return response; }
 
-            var t = request.Track;
-            var record = await db.SvScores.SingleOrDefaultAsync(x =>
-                x.Profile == profile.Id && x.MusicId == t.MusicId && x.Type == t.MusicType && x.Version == gameVersion);
-            bool isNew = record is null;
-            record ??= new SvScore
+            // asphyxia saveScore processes a `track` element array — the game sends
+            // one or more track elements per request. Iterate all of them.
+            foreach (var t in request.Tracks)
             {
-                MusicId = t.MusicId, Type = t.MusicType, Version = gameVersion, Profile = profile.Id,
-                Score = 0, Exscore = 0, Clear = 0, Grade = 0,
-                ButtonRate = 0, LongRate = 0, VolRate = 0, Volforce = 0, PlayCount = 0,
-            };
+                var record = await db.SvScores.SingleOrDefaultAsync(x =>
+                    x.Profile == profile.Id && x.MusicId == t.MusicId && x.Type == t.MusicType && x.Version == gameVersion);
+                bool isNew = record is null;
+                record ??= new SvScore
+                {
+                    MusicId = t.MusicId, Type = t.MusicType, Version = gameVersion, Profile = profile.Id,
+                    Score = 0, Exscore = 0, Clear = 0, Grade = 0,
+                    ButtonRate = 0, LongRate = 0, VolRate = 0, Volforce = 0, PlayCount = 0,
+                };
 
-            if (t.Score > record.Score)
-            {
-                record.Score = t.Score;
-                record.ButtonRate = t.BtnRate;
-                record.LongRate = t.LongRate;
-                record.VolRate = t.VolRate;
-            }
-            if (t.ExScore > record.Exscore) record.Exscore = t.ExScore;
+                if (t.Score > record.Score)
+                {
+                    record.Score = t.Score;
+                    record.ButtonRate = t.BtnRate;
+                    record.LongRate = t.LongRate;
+                    record.VolRate = t.VolRate;
+                }
+                if (t.ExScore > record.Exscore) record.Exscore = t.ExScore;
 
-            // Clear lamp handling: EG uses a non-monotonic order; NABLA is chronological.
-            if (gameVersion == 6)
-            {
-                int newClear = t.ClearType;
-                int oldClear = record.Clear;
-                bool newIsGreater = Array.IndexOf(EgClearLampOrder, newClear) > Array.IndexOf(EgClearLampOrder, oldClear);
-                record.Clear = newIsGreater ? newClear : oldClear;
-            }
-            else
-            {
-                record.Clear = Math.Max(t.ClearType, record.Clear);
-            }
-            record.Grade = Math.Max(t.ScoreGrade, record.Grade);
+                // Clear lamp handling: EG uses a non-monotonic order; NABLA is chronological.
+                if (gameVersion == 6)
+                {
+                    int newClear = t.ClearType;
+                    int oldClear = record.Clear;
+                    bool newIsGreater = Array.IndexOf(EgClearLampOrder, newClear) > Array.IndexOf(EgClearLampOrder, oldClear);
+                    record.Clear = newIsGreater ? newClear : oldClear;
+                }
+                else
+                {
+                    record.Clear = Math.Max(t.ClearType, record.Clear);
+                }
+                record.Grade = Math.Max(t.ScoreGrade, record.Grade);
 
-            if (gameVersion == 7)
-            {
-                int volforce = 0; // game sends volforce via track? asphyxia reads i.number('volforce', 0)
-                if (volforce > record.Volforce) record.Volforce = volforce;
-            }
-            record.PlayCount++;
+                if (gameVersion == 7)
+                {
+                    if (t.Volforce > record.Volforce) record.Volforce = t.Volforce;
+                }
+                record.PlayCount++;
 
-            if (isNew) db.SvScores.Add(record);
-            else db.SvScores.Update(record);
+                if (isNew) db.SvScores.Add(record);
+                else db.SvScores.Update(record);
+            }
+
             await db.SaveChangesAsync();
             return response;
         }

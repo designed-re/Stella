@@ -48,12 +48,6 @@ namespace StellaKFCPlugin.Models
         [XmlElement(ElementName = "blaster_energy")]
         public uint BlasterEnergy { get; set; }
 
-        [XmlElement(ElementName = "blaster_count")]
-        public uint BlasterCount { get; set; }
-
-        [XmlElement(ElementName = "extrack_energy")]
-        public ushort ExtrackEnergy { get; set; }
-
         [XmlElement(ElementName = "hispeed")]
         public int Hispeed { get; set; }
 
@@ -102,6 +96,12 @@ namespace StellaKFCPlugin.Models
         [XmlElement(ElementName = "support_team_id")]
         public int SupportTeamId { get; set; }
 
+        [XmlElement(ElementName = "weekly_music")]
+        public List<LoadWeeklyMusic> WeeklyMusic { get; set; } = new();
+
+        [XmlElement(ElementName = "additional_info")]
+        public AdditionalInfoElement AdditionalInfo { get; set; } = new();
+
         [XmlElement(ElementName = "ea_shop")]
         public EaShop EaShop { get; set; } = new();
 
@@ -119,6 +119,9 @@ namespace StellaKFCPlugin.Models
 
         [XmlElement(ElementName = "item")]
         public ItemElement Item { get; set; } = new();
+
+        [XmlElement(ElementName = "present")]
+        public PresentElement Present { get; set; } = new();
 
         [XmlElement(ElementName = "param")]
         public ParamElement Param { get; set; } = new();
@@ -150,26 +153,17 @@ namespace StellaKFCPlugin.Models
         [XmlElement(ElementName = "max_week_chain")]
         public uint MaxWeekChain { get; set; }
 
-        [XmlElement(ElementName = "valgene_ticket")]
-        public ValgeneTicket ValgeneTicket { get; set; } = new();
-
-        [XmlElement(ElementName = "present")]
-        public PresentElement Present { get; set; } = new();
-
         [XmlElement(ElementName = "arena")]
         public LoadArenaElement? Arena { get; set; }
 
-        [XmlElement(ElementName = "variant_gate")]
-        public VariantGateElement? VariantGate { get; set; }
+        [XmlElement(ElementName = "valgene_ticket")]
+        public ValgeneTicket ValgeneTicket { get; set; } = new();
 
         [XmlElement(ElementName = "creator_item")]
         public CreatorItemElement? CreatorItem { get; set; }
 
-        [XmlElement(ElementName = "additional_info")]
-        public AdditionalInfoElement? AdditionalInfo { get; set; }
-
-        [XmlElement(ElementName = "weekly_music")]
-        public List<LoadWeeklyMusic> WeeklyMusic { get; set; } = new();
+        [XmlElement(ElementName = "variant_gate")]
+        public VariantGateElement? VariantGate { get; set; }
     }
 
     [XmlRoot(ElementName = "present")]

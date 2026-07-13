@@ -137,8 +137,6 @@ namespace StellaKFCPlugin.Handlers
                 SortType = profile.SortType,
                 Headphone = profile.Headphone,
                 BlasterEnergy = profile.BlasterEnergy,
-                BlasterCount = profile.BlasterCount,
-                ExtrackEnergy = profile.ExtrackEnergy,
                 Hispeed = profile.Hispeed,
                 Lanespeed = profile.Lanespeed,
                 GaugeOption = profile.GaugeOption,
@@ -266,11 +264,11 @@ namespace StellaKFCPlugin.Handlers
                 };
             }
 
-            // Additional info (pro_team_id when bplPro && bplSupport > 0).
-            if (bplPro && bplSupport > 0)
-            {
-                response.AdditionalInfo = new AdditionalInfoElement { ProTeamId = bplSupport.ToString() };
-            }
+            // Additional info — asphyxia pug always renders this element (pro_team_id
+            // is conditional, but the additional_info wrapper is always present).
+            response.AdditionalInfo = bplPro && bplSupport > 0
+                ? new AdditionalInfoElement { ProTeamId = bplSupport.ToString() }
+                : new AdditionalInfoElement();
 
             return response;
         }
@@ -301,11 +299,13 @@ namespace StellaKFCPlugin.Handlers
                 };
                 if (gameVersion == 7)
                 {
+                    // asphyxia loadScore v7: 26 params (mid..volforce + 14 zeros)
                     param.Add((uint)s.Volforce);
-                    for (int i = 0; i < 16; i++) param.Add(0);
+                    for (int i = 0; i < 14; i++) param.Add(0);
                 }
                 else
                 {
+                    // asphyxia loadScore v6: 21 params (mid..volRate + 10 zeros)
                     for (int i = 0; i < 10; i++) param.Add(0);
                 }
                 response.Music.Infos.Add(new MusicInfo { Param = param });

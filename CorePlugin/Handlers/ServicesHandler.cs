@@ -93,6 +93,7 @@ namespace CorePlugin.Handlers
                     new ServiceItem { Name = "game.sv7_save_e", Url = url },
                     new ServiceItem { Name = "game.sv7_play_e", Url = url },
                     new ServiceItem { Name = "game.sv7_play_s", Url = url },
+                    new ServiceItem { Name = "game.sv7_shop", Url = url },
                 }
             };
         }

@@ -5,8 +5,8 @@ using StellaKFCPlugin.Models;
 namespace StellaKFCPlugin.Handlers
 {
     /// <summary>
-    /// Unified <c>play_s</c>/<c>play_e</c> handlers. asphyxia returns success
-    /// (no-op) for both; Stella returns an empty response.
+    /// Unified <c>play_s</c>/<c>play_e</c>/<c>shop</c> handlers. asphyxia returns
+    /// success (no-op) for play_s/play_e and a simple nxt_time for shop.
     /// </summary>
     public class PlayHandler : StellaHandler
     {
@@ -21,5 +21,11 @@ namespace StellaKFCPlugin.Handlers
 
         [StellaHandler("game", "sv7_play_e", typeof(PlaySERequest))]
         public async Task<PlaySEResponse> PlayENabla() => new();
+
+        [StellaHandler("game", "sv6_shop", typeof(ShopRequest))]
+        public async Task<ShopResponse> Shop() => new();
+
+        [StellaHandler("game", "sv7_shop", typeof(ShopRequest))]
+        public async Task<ShopResponse> ShopNabla() => new();
     }
 }
