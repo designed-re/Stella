@@ -50,6 +50,18 @@ namespace CorePlugin.Models
 
     // Request models
     [XmlRoot(ElementName = "eacoin")]
+    public class EacoinCheckoutRequest : IStellaEAmuseRequest
+    {
+    }
+
+    [XmlRoot(ElementName = "eacoin")]
+    public class EacoinCheckoutResponse : IStellaEAmuseResponse
+    {
+        [XmlAttribute(AttributeName = "status")]
+        public string Status { get; set; } = "0";
+    }
+
+    [XmlRoot(ElementName = "eacoin")]
     public class CheckInRequest : IStellaEAmuseRequest
     {
         [XmlElement(ElementName = "cardid")]

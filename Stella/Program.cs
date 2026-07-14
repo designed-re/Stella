@@ -325,7 +325,8 @@ namespace Stella
                 // Add __type attributes to all elements based on the response type
                 document.AddKBinTypesFromResponse(res);
 
-                // Console.WriteLine(document);
+                try { System.IO.File.WriteAllText("/tmp/debug_response.xml", document.ToString()); } catch { }
+                Console.WriteLine("DEBUG response XML: " + document.ToString());
                 byte[] resData;
                 if (data.Encoding != null)
                     resData = KbinConverter.Write(document, data.Encoding.ToKnownEncoding(), new WriteOptions());

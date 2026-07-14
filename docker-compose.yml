@@ -36,6 +36,9 @@ services:
       # Connection strings — the host is `db` (the compose service name).
       STELLA_KFC_DB: "Server=db;Port=3306;User ID=stella;Password=stella;Database=stella_kfc"
       STELLA_CORE_DB: "Server=db;Port=3306;User ID=stella;Password=stella;Database=stella_core"
+      # Disable HTTP_PORTS so ASPNETCORE_URLS is the sole URL source (avoids
+      # the "Overriding HTTP_PORTS" warning).
+      ASPNETCORE_HTTP_PORTS: ""
       # Plugin toggles
       STELLA_KFC_UNLOCK_ALL_SONGS: "true"
       STELLA_KFC_ARENA_OPEN: "true"

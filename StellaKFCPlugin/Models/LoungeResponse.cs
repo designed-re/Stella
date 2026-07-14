@@ -15,5 +15,8 @@ namespace StellaKFCPlugin.Models
 
         [XmlElement(ElementName = "interval")]
         public uint Interval { get; set; }
+
+        [XmlElement(ElementName = "wait")]
+        public uint Wait { get; set; }
     }
 }

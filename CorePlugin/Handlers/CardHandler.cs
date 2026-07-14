@@ -105,6 +105,14 @@ namespace CorePlugin.Handlers
                 RefId = card.RefId
             };
         }
+
+        [StellaHandler("cardmng", "bindmodel", typeof(CardBindModelRequest))]
+        public async Task<CardBindModelResponse> BindModel()
+        {
+            var request = Request as CardBindModelRequest;
+            // asphyxia just returns dataid = refid (no real binding logic).
+            return new CardBindModelResponse { DataId = request?.RefId ?? "DEADC0DEFEEDBEEF" };
+        }
     }
 }
 

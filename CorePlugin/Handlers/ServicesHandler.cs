@@ -76,6 +76,7 @@ namespace CorePlugin.Handlers
                     new ServiceItem { Name = "game.sv6_entry_s", Url = url },
                     new ServiceItem { Name = "game.sv6_entry_e", Url = url },
                     new ServiceItem { Name = "game.sv6_exception", Url = url },
+                    new ServiceItem { Name = "game.sv6_log", Url = url },
                     // NABLA (sv7)
                     new ServiceItem { Name = "game.sv7_common", Url = url },
                     new ServiceItem { Name = "game.sv7_new", Url = url },
@@ -87,13 +88,20 @@ namespace CorePlugin.Handlers
                     new ServiceItem { Name = "game.sv7_save_pb", Url = url },
                     new ServiceItem { Name = "game.sv7_save_valgene", Url = url },
                     new ServiceItem { Name = "game.sv7_frozen", Url = url },
+                    new ServiceItem { Name = "game.sv7_buy", Url = url },
+                    new ServiceItem { Name = "game.sv7_print", Url = url },
                     new ServiceItem { Name = "game.sv7_hiscore", Url = url },
                     new ServiceItem { Name = "game.sv7_load_r", Url = url },
                     new ServiceItem { Name = "game.sv7_lounge", Url = url },
+                    new ServiceItem { Name = "game.sv7_shop", Url = url },
                     new ServiceItem { Name = "game.sv7_save_e", Url = url },
+                    new ServiceItem { Name = "game.sv7_save_mega", Url = url },
                     new ServiceItem { Name = "game.sv7_play_e", Url = url },
                     new ServiceItem { Name = "game.sv7_play_s", Url = url },
-                    new ServiceItem { Name = "game.sv7_shop", Url = url },
+                    new ServiceItem { Name = "game.sv7_entry_s", Url = url },
+                    new ServiceItem { Name = "game.sv7_entry_e", Url = url },
+                    new ServiceItem { Name = "game.sv7_exception", Url = url },
+                    new ServiceItem { Name = "game.sv7_log", Url = url },
                 }
             };
         }

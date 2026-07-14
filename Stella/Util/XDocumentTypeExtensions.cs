@@ -266,15 +266,15 @@ namespace Stella.Util
             if (xmlElementAttr?.ElementName != null)
                 return xmlElementAttr.ElementName;
 
-            // Otherwise, convert property name from plural to singular or use default naming
-            // Infos �� info, Items �� item, etc.
+            // Otherwise, use snake_case conversion (OverRadar -> over_radar,
+            // Param -> param, Infos -> info, etc.)
             var name = propertyName;
             if (name.EndsWith("ies"))
                 name = name.Substring(0, name.Length - 3) + "y";
             else if (name.EndsWith("s") && !name.EndsWith("ss"))
                 name = name.Substring(0, name.Length - 1);
 
-            return ConvertToXmlElementName(name);
+            return ConvertToSnakeCaseElementName(name);
         }
 
         private static XElement FindChildElement(XElement parent, string propertyName)
@@ -387,12 +387,18 @@ namespace Stella.Util
 
         private static string GetKBinType(Type type, string propertyName = null, string value = null)
         {
-            // Check if property name suggests it's an IP address
-            if (!string.IsNullOrEmpty(propertyName) && 
-                (propertyName.Contains("ip", StringComparison.OrdinalIgnoreCase) || 
-                 propertyName.Contains("Ip", StringComparison.Ordinal)))
+            // Check if property name suggests it's an IP address — only match
+            // exact "ip" or "gip"/"lip" (e-amusement IP fields), not substrings
+            // like "handtrip" or "ship" which contain "ip" incidentally.
+            if (!string.IsNullOrEmpty(propertyName))
             {
-                return "ip4";
+                var lower = propertyName.ToLowerInvariant();
+                if (lower == "ip" || lower == "gip" || lower == "lip" ||
+                    lower.EndsWith("_ip") || lower.EndsWith("ipaddr") ||
+                    lower.EndsWith("ip_addr"))
+                {
+                    return "ip4";
+                }
             }
 
             // Check if value looks like an IP address (IPv4)

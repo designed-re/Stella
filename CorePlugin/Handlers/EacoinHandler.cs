@@ -11,6 +11,9 @@ namespace CorePlugin.Handlers
 {
     public class EacoinHandler : StellaHandler
     {
+        [StellaHandler("eacoin", "checkout", typeof(EacoinCheckoutRequest))]
+        public async Task<EacoinCheckoutResponse> Checkout() => new();
+
         [StellaHandler("eacoin", "checkin", typeof(CheckInRequest))]
         public async Task<CheckInResponse> CheckIn()
         {
