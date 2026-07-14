@@ -177,8 +177,14 @@ namespace StellaKFCPlugin.Handlers
         [XmlElement(ElementName = "claim")] public int Claim { get; set; }
         [XmlElement(ElementName = "entry_id")] public int EntryId { get; set; }
         [XmlElement(ElementName = "port")] public int Port { get; set; }
-        [XmlElement(ElementName = "gip")] public List<int> Gip { get; set; } = new();
-        [XmlElement(ElementName = "lip")] public List<int> Lip { get; set; } = new();
+        [XmlElement(ElementName = "gip")] public string GipRaw { get; set; } = "";
+        [XmlElement(ElementName = "lip")] public string LipRaw { get; set; } = "";
+
+        [XmlIgnore]
+        public List<int> Gip => GipRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList();
+
+        [XmlIgnore]
+        public List<int> Lip => LipRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList();
     }
 
     [XmlRoot(ElementName = "game")]
