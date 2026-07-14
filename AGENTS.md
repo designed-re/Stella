@@ -55,36 +55,77 @@ Each plugin's `PostBuild` target copies its DLL and config into `Stella/bin/Debu
 
 Extend `StellaHandler` and annotate methods with `[StellaHandler(service, module, typeof(Request))]`:
 
+`service`/`module` must match the request's `f` query param (`service.method`). New plugins implement `IStellaPlugin` (`Name`, `Version`, `GameCode`, `OnBuilderInitialize`/`OnAppInitialize`) and ship a `plugin_<name>.example.json`.
+
+### When adding a handler, ask the user which pattern to use
+
+When a new handler covers multiple game versions (e.g. sv6 + sv7), **ask the user** whether the two versions should share logic or be implemented separately. Do not assume — the answer depends on how different the asphyxia code paths are:
+
+- **Shared (unified)** — if asphyxia uses the same handler function for both versions and branches internally on `getVersion(info)`, use one `[StellaHandler]` per version that calls a common `HandleInternal(gameVersion)`:
+
 ```csharp
 public class MyHandler : StellaHandler
 {
-    [StellaHandler("myservice", "sv6_mymethod", typeof(MyRequest))]
+    [StellaHandler("game", "sv6_mymethod", typeof(MyRequest))]
     public async Task<MyResponse> Handle() => await HandleInternal(6);
 
-    [StellaHandler("myservice", "sv7_mymethod", typeof(MyRequest))]
+    [StellaHandler("game", "sv7_mymethod", typeof(MyRequest))]
     public async Task<MyResponse> HandleNabla() => await HandleInternal(7);
 
     private async Task<MyResponse> HandleInternal(int gameVersion)
     {
         var request = Request as MyRequest;
         if (request is null) return new MyResponse { Status = "1" };
-        // ...
+        // Branch on gameVersion where asphyxia branches on getVersion(info)
     }
 }
 ```
 
-`service`/`module` must match the request's `f` query param (`service.method`). New plugins implement `IStellaPlugin` (`Name`, `Version`, `GameCode`, `OnBuilderInitialize`/`OnAppInitialize`) and ship a `plugin_<name>.example.json`.
+- **Separate** — if asphyxia uses different handler functions or the v6/v7 logic diverges significantly (different request/response models, different DB schemas, different pug templates), implement each version as its own method with independent logic:
+
+```csharp
+public class MyHandler : StellaHandler
+{
+    [StellaHandler("game", "sv6_mymethod", typeof(MyV6Request))]
+    public async Task<MyV6Response> HandleV6()
+    {
+        var request = Request as MyV6Request;
+        if (request is null) return new MyV6Response { Status = "1" };
+        // v6-only logic
+    }
+
+    [StellaHandler("game", "sv7_mymethod", typeof(MyV7Request))]
+    public async Task<MyV7Response> HandleV7()
+    {
+        var request = Request as MyV7Request;
+        if (request is null) return new MyV7Response { Status = "1" };
+        // v7-only logic
+    }
+}
+```
+
+Always null-check after `Request as XXXRequest` — deserialization can fail and `Request` will be null.
 
 ### Handler completeness — the asphyxia parity rule
 
-Stella aims for byte-level response parity with the asphyxia plugin (`/home/user/kfc` for KFC, `/home/user/core` for core). Every route registered in asphyxia MUST have a corresponding `[StellaHandler]` in Stella. Missing handlers cause the game to log `crypt level not match` or `No handler found` and fail the request.
+Stella aims for byte-level response parity with the asphyxia plugin. This applies to **all** plugins, not just KFC. Every route registered in the corresponding asphyxia plugin MUST have a matching `[StellaHandler]` in Stella. Missing handlers cause the game to log `crypt level not match` or `No handler found` and fail the request.
 
-**Before adding or modifying handlers, always cross-check against asphyxia:**
-- KFC routes: `kfc/index.ts` `MultiRoute('method', handler)` → registers `game.method`, `game_2.method`, `game.sv6_method`, `game.sv7_method`.
+**Before adding or modifying handlers for any plugin, always cross-check against the asphyxia source:**
+- Game-specific plugins: `<plugin>/index.ts` `MultiRoute('method', handler)` or `R.Route(...)`. Note that `MultiRoute` registers `game.method`, `game_2.method`, `game.sv6_method`, `game.sv7_method` — Stella needs at least the `sv6_*` and `sv7_*` variants.
 - Core routes: `core/src/eamuse/Core/*.ts` `container.add('service.method', handler)`.
 - Stub routes (asphyxia passes `true`): `save_mega`, `play_e`, `play_s`, `frozen`, `exception` — Stella must still register these with a success-only response.
+- Inline routes (defined directly in `index.ts` with `send.object(...)`): `shop`, `eventlog.write`, `package.list`, `ins.netlog` — port the exact response shape.
 
-**Current handler inventory** (66 total): see `ServicesHandler.cs` for the full `services.get` list. If you add a new asphyxia route, also add it to `services.get` so the game knows the endpoint exists.
+**When porting an asphyxia handler to Stella, verify ALL of the following:**
+1. **Route name**: `service.module` matches exactly (case-sensitive). `game.sv7_entry_s` not `game.sv7_entryS`.
+2. **Response fields**: every field in the asphyxia `send.object({...})` or pug template must be present in the Stella response model. No extra fields, no missing fields.
+3. **Field order**: property declaration order in C# = XML element order on the wire. Must match asphyxia's `send.object({...})` key order or pug template line order.
+4. **Field types**: `__type` must match (see "Response XML serialization" below). `u8` vs `s8` vs `u32` — check asphyxia's `K.ITEM('type', value)`.
+5. **Conditional fields**: if asphyxia uses `if` guards, decide whether to use nullable types (to omit) or always-render with defaults (to match asphyxia's initialized-to-zero behavior).
+6. **Stub handlers**: if asphyxia passes `true` for a route, Stella should return a minimal success response (empty body with `status="0"`).
+7. **`services.get`**: if you add a new game route, also add it to `ServicesHandler.cs` so the game knows the endpoint exists.
+
+**Current handler inventory** (66 total): see `ServicesHandler.cs` for the full `services.get` list.
 
 ### KFC Plugin (EXCEED GEAR + NABLA)
 
@@ -98,11 +139,11 @@ The `IDataProvider` abstraction (default: `DbDataProvider`) reads static data fr
 
 The e-amusement protocol uses KBinXML, a binary XML format where every leaf node carries a `__type` attribute (e.g. `u8`, `s32`, `str`) and array nodes carry a `__count` attribute. The game's parser is strict — wrong types, missing fields, wrong field order, or missing `__count` cause `property_node_refer error` logs, `crypt level not match`, or outright crashes.
 
-### Field order MUST match asphyxia's pug templates
+### Field order MUST match asphyxia's response structure
 
-The game's XML parser expects fields in a specific order. **Always compare your `[XmlElement]` ordering against the asphyxia pug template** (`kfc/templates/load.pug` for `load`, or the `send.object({...})` call order in asphyxia handlers for other endpoints). C# `XmlSerializer` emits elements in declaration order, so the property order in `Models/*.cs` IS the wire order.
+The game's XML parser expects fields in a specific order. **Always compare your `[XmlElement]` ordering against the asphyxia source** — pug templates (`<plugin>/templates/*.pug`) for template-based responses, or the `send.object({...})` call order in asphyxia handlers for inline responses. C# `XmlSerializer` emits elements in declaration order, so the property order in `Models/*.cs` IS the wire order.
 
-Known field-order-sensitive responses:
+Known field-order-sensitive responses (KFC examples — same principle applies to all plugins):
 - **`load`** (`LoadResponse.cs`): must match `kfc/templates/load.pug` lines 59-215 exactly. The order is: `result` → `name` → `code` → `sdvx_id` → `gamecoin_packet` → `gamecoin_block` → `appeal_id` → `last_music_id` → ... → `kac_id` → `skill_*` → `support_team_id` → `weekly_music` → `additional_info` → `ea_shop` → `eaappli` → `cloud` → `block_no` → `skill` → `item` → `present` → `param` → count fields → `arena` → `valgene_ticket` → `creator_item` → `variant_gate`.
 - **`common`** (`GetCommonResponse.cs`): must match `kfc/handlers/common.ts` `send.object({...})` key order.
 - **`load_m`** (`LoadMResponse.cs`): v6 = 21 params, v7 = 26 params (see asphyxia `loadScore`).
@@ -130,6 +171,24 @@ asphyxia pug uses `if` guards (e.g. `if playCount`, `if arena`, `if variant`). I
 ### Fields NOT in asphyxia responses
 
 Do NOT add fields that asphyxia doesn't send. The game's parser may reject unknown elements. For example, `extrack_energy` was in an early Stella `LoadResponse` but is NOT in the asphyxia pug — it was removed to match.
+
+### Request deserialization — space-separated arrays
+
+asphyxia uses `$(data).numbers('field')` to read space-separated integer arrays from a single XML element (e.g. `<gip>172 19 0 1</gip>`). C# `XmlSerializer` cannot deserialize this into `List<int>` directly — it expects separate `<gip>` elements per value.
+
+**For request models with space-separated integer arrays** (e.g. `gip`, `lip` in `entry_s`):
+- Declare the field as `string` with `[XmlElement]`.
+- Add a `[XmlIgnore]` computed property that parses the string into `List<int>`:
+
+```csharp
+[XmlElement(ElementName = "gip")]
+public string GipRaw { get; set; } = "";
+
+[XmlIgnore]
+public List<int> Gip => GipRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList();
+```
+
+**For response models** that need `__count`/`__type` on arrays (e.g. `over_radar`, `param`), use `List<int>` so `XDocumentTypeExtensions` emits the correct attributes. The response side is handled by the serializer, not `XmlSerializer` directly.
 
 ## Database & Configuration
 
