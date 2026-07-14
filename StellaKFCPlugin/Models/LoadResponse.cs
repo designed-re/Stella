@@ -48,6 +48,9 @@ namespace StellaKFCPlugin.Models
         [XmlElement(ElementName = "blaster_energy")]
         public uint BlasterEnergy { get; set; }
 
+        [XmlElement(ElementName = "blaster_count")]
+        public uint BlasterCount { get; set; }
+
         [XmlElement(ElementName = "hispeed")]
         public int Hispeed { get; set; }
 
@@ -163,7 +166,7 @@ namespace StellaKFCPlugin.Models
         public CreatorItemElement? CreatorItem { get; set; }
 
         [XmlElement(ElementName = "variant_gate")]
-        public VariantGateElement? VariantGate { get; set; }
+        public VariantGateElement VariantGate { get; set; } = new();
     }
 
     [XmlRoot(ElementName = "present")]
@@ -221,7 +224,7 @@ namespace StellaKFCPlugin.Models
         public int Power { get; set; }
 
         [XmlElement(ElementName = "over_radar")]
-        public string OverRadar { get; set; } = string.Empty;
+        public List<int> OverRadar { get; set; } = new();
 
         [XmlElement(ElementName = "element")]
         public VariantElement Element { get; set; } = new();

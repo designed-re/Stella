@@ -137,6 +137,7 @@ namespace StellaKFCPlugin.Handlers
                 SortType = profile.SortType,
                 Headphone = profile.Headphone,
                 BlasterEnergy = profile.BlasterEnergy,
+                BlasterCount = profile.BlasterCount,
                 Hispeed = profile.Hispeed,
                 Lanespeed = profile.Lanespeed,
                 GaugeOption = profile.GaugeOption,
@@ -237,23 +238,30 @@ namespace StellaKFCPlugin.Handlers
                 };
             }
 
-            // Variant gate (asphyxia pug L205-214).
-            if (variant is not null)
+            // Variant gate — asphyxia initializes to zeros if no DB record exists,
+            // and always renders the variant_gate element (pug `if variant` is true
+            // because the default object is truthy).
+            // Variant gate — asphyxia initializes to zeros if no DB record exists,
+            // and always renders the variant_gate element. over_radar is always
+            // present (asphyxia __count=0 for empty). We ensure at least one element
+            // so XmlSerializer emits the node; XDocumentTypeExtensions adds __count.
+            var overRadarList = variant != null && !string.IsNullOrEmpty(variant.OverRadar)
+                ? variant.OverRadar.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList()
+                : new List<int> { 0 };
+            response.VariantGate = new VariantGateElement
             {
-                var overRadar = string.IsNullOrEmpty(variant.OverRadar)
-                    ? new List<int>()
-                    : variant.OverRadar.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList();
-                response.VariantGate = new VariantGateElement
+                Power = variant?.Power ?? 0,
+                OverRadar = overRadarList,
+                Element = new VariantElement
                 {
-                    Power = variant.Power,
-                    OverRadar = string.Join(" ", overRadar),
-                    Element = new VariantElement
-                    {
-                        Notes = variant.Notes, Peak = variant.Peak, Tsumami = variant.Tsumami,
-                        Tricky = variant.Tricky, Onehand = variant.Onehand, Handtrip = variant.Handtrip,
-                    },
-                };
-            }
+                    Notes = variant?.Notes ?? 0,
+                    Peak = variant?.Peak ?? 0,
+                    Tsumami = variant?.Tsumami ?? 0,
+                    Tricky = variant?.Tricky ?? 0,
+                    Onehand = variant?.Onehand ?? 0,
+                    Handtrip = variant?.Handtrip ?? 0,
+                },
+            };
 
             // Creator item (asphyxia pug L198-203).
             if (creatorItem > 1)

@@ -202,7 +202,7 @@ namespace Stella.Util
                     itemList.Add(item);
                 }
 
-                if (itemList.Count > 0 && listElements.Count > 0)
+                if (listElements.Count > 0)
                 {
                     var firstElem = listElements[0];
                     var kbinType = GetKBinType(elementType, property.Name);
@@ -212,7 +212,8 @@ namespace Stella.Util
                         // Set __type attribute
                         firstElem.SetAttributeValue("__type", kbinType);
                         
-                        // Set __count attribute
+                        // Set __count attribute (even for empty arrays â€” asphyxia
+                        // renders __count=0 so the game doesn't crash on missing nodes).
                         firstElem.SetAttributeValue("__count", itemList.Count.ToString());
                         
                         // Combine all values as space-separated string
@@ -266,7 +267,7 @@ namespace Stella.Util
                 return xmlElementAttr.ElementName;
 
             // Otherwise, convert property name from plural to singular or use default naming
-            // Infos ¡æ info, Items ¡æ item, etc.
+            // Infos ï¿½ï¿½ info, Items ï¿½ï¿½ item, etc.
             var name = propertyName;
             if (name.EndsWith("ies"))
                 name = name.Substring(0, name.Length - 3) + "y";
@@ -296,7 +297,7 @@ namespace Stella.Util
             if (caseInsensitiveMatch != null)
                 return caseInsensitiveMatch;
 
-            // Try snake_case conversion (MusicLimited ¡æ music_limited)
+            // Try snake_case conversion (MusicLimited ï¿½ï¿½ music_limited)
             var snakeCaseName = ConvertToSnakeCaseElementName(propertyName);
             var snakeCaseMatch = parent.Elements()
                 .FirstOrDefault(e => e.Name.LocalName.Equals(snakeCaseName, StringComparison.OrdinalIgnoreCase));
@@ -316,9 +317,9 @@ namespace Stella.Util
         private static string ConvertToSnakeCaseElementName(string propertyName)
         {
             // Convert PascalCase to snake_case
-            // MusicLimited ¡æ music_limited
-            // SkillLevel ¡æ skill_level
-            // ValgeneId ¡æ valgene_id
+            // MusicLimited ï¿½ï¿½ music_limited
+            // SkillLevel ï¿½ï¿½ skill_level
+            // ValgeneId ï¿½ï¿½ valgene_id
             
             if (string.IsNullOrEmpty(propertyName))
                 return propertyName;
