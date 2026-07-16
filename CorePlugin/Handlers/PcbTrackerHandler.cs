@@ -8,7 +8,6 @@ namespace CorePlugin.Handlers
         [StellaHandler("pcbtracker", "alive", typeof(GetPcbTrackerRequest))]
         public async Task<GetPcbTrackerResponse> GetPcbTrackerAlive()
         {
-            Console.WriteLine((Request as GetPcbTrackerRequest).Accountid);
             return new GetPcbTrackerResponse()
             {
                 Expire = 600,
