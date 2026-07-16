@@ -304,17 +304,30 @@ namespace Stella
                 XmlWriter writer = new XmlTextWriter(sw);
 
                 writer.WriteStartElement("response");
-                
-                // Get the actual response type (not the Task type)
-                var serializationType = res.GetType();
-                if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>))
-                {
-                    // If returnType is Task<T>, use T for serialization
-                    serializationType = returnType.GetGenericArguments()[0];
-                }
+
                 XmlSerializerNamespaces ns = new XmlSerializerNamespaces();
                 ns.Add("", "");
-                new XmlSerializer(serializationType).Serialize(writer, res, ns);
+
+                // Multi-element responses (asphyxia send.object([{...},{...},...]))
+                // serialize as several sibling elements under <response>.
+                if (res is IStellaMultiElementResponse multi)
+                {
+                    foreach (var element in multi.Elements)
+                    {
+                        new XmlSerializer(element.GetType()).Serialize(writer, element, ns);
+                    }
+                }
+                else
+                {
+                    // Get the actual response type (not the Task type)
+                    var serializationType = res.GetType();
+                    if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>))
+                    {
+                        // If returnType is Task<T>, use T for serialization
+                        serializationType = returnType.GetGenericArguments()[0];
+                    }
+                    new XmlSerializer(serializationType).Serialize(writer, res, ns);
+                }
 
                 var data = context.Items["ea"] as EAmuseXrpcData;
 
@@ -323,17 +336,22 @@ namespace Stella
                 XDocument document = XDocument.Parse(sb.ToString());
 
                 // Add __type attributes to all elements based on the response type
-                document.AddKBinTypesFromResponse(res);
+                if (res is IStellaMultiElementResponse multiTypes)
+                {
+                    foreach (var element in multiTypes.Elements)
+                        document.AddKBinTypesFromResponse(element);
+                }
+                else
+                {
+                    document.AddKBinTypesFromResponse(res);
+                }
 
-                try { System.IO.File.WriteAllText("/tmp/debug_response.xml", document.ToString()); } catch { }
-                Console.WriteLine("DEBUG response XML: " + document.ToString());
                 byte[] resData;
                 if (data.Encoding != null)
                     resData = KbinConverter.Write(document, data.Encoding.ToKnownEncoding(), new WriteOptions());
                 else
                     resData = KbinConverter.Write(document, KnownEncodings.ShiftJIS, new WriteOptions());
 
-                // Console.WriteLine(KbinConverter.ReadXmlLinq(resData));
 
                 string algo = "none";
 
