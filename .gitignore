@@ -403,3 +403,20 @@ FodyWeavers.xsd
 # Additional files built by Visual Studio
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudio
+
+# Plugin runtime config (contains DB credentials).
+# Copy plugin_*.example.json to plugin_*.json and edit, or set the
+# STELLA_CORE_DB / STELLA_KFC_DB environment variables instead.
+plugin_core.json
+plugin_kfc.json
+
+# Build artifacts with backslash paths (Windows-style, leak through [Bb]in/).
+**/bin\\Debug/
+**/obj\\Debug/
+
+# Large seed data — users provide music_db.xml locally or via docker-compose
+# volume mount. asphyxia_data.json (130KB) is committed.
+**/Data/Seed/music_db.xml
+
+# Docker-generated local data
+Stella/bin/Debug/net10.0/Data/Seed/music_db.xml

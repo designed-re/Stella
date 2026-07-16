@@ -15,7 +15,7 @@ namespace CorePlugin.Handlers
         {
             var request = Request as CardInquireRequest;
 
-            var context = new CoreContext();
+            using var context = new CoreContext();
             var card = context.Cards.FirstOrDefault(x=> x.CardId == request.Cardid);
 
             if (card is null)
@@ -42,7 +42,7 @@ namespace CorePlugin.Handlers
         {
             var request = Request as CardAuthpassRequest;
 
-            var context = new CoreContext();
+            using var context = new CoreContext();
             var card = context.Cards.FirstOrDefault(x => x.RefId == request.RefId.ToUpper());
 
             int status;
@@ -65,7 +65,7 @@ namespace CorePlugin.Handlers
         public async Task<CardGetRefIdResponse> GetRefId()
         {
             var request = Request as CardGetRefIdRequest;
-            var context = new CoreContext();
+            using var context = new CoreContext();
 
             string cardId = request.CardId.ToUpper();
             string passwd = request.Passwd;
@@ -104,6 +104,14 @@ namespace CorePlugin.Handlers
                 DataId = card.RefId,
                 RefId = card.RefId
             };
+        }
+
+        [StellaHandler("cardmng", "bindmodel", typeof(CardBindModelRequest))]
+        public async Task<CardBindModelResponse> BindModel()
+        {
+            var request = Request as CardBindModelRequest;
+            // asphyxia just returns dataid = refid (no real binding logic).
+            return new CardBindModelResponse { DataId = request?.RefId ?? "DEADC0DEFEEDBEEF" };
         }
     }
 }

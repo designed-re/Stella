@@ -27,6 +27,100 @@ namespace StellaKFCPlugin.Models
 
         [XmlElement(ElementName = "music_limited")]
         public MusicLimitedElement MusicLimited { get; set; } = new();
+
+        [XmlElement(ElementName = "apigene")]
+        public ApigeneElement? Apigene { get; set; }
+
+        [XmlElement(ElementName = "music")]
+        public MusicOverrideElement Music { get; set; } = new();
+
+        [XmlElement(ElementName = "weekly_music")]
+        public List<WeeklyMusicInfo> WeeklyMusic { get; set; } = new();
+    }
+
+    [XmlRoot(ElementName = "apigene")]
+    public class ApigeneElement
+    {
+        [XmlElement(ElementName = "info")]
+        public List<ApigeneInfo> Infos { get; set; } = new();
+
+        [XmlElement(ElementName = "catalog")]
+        public List<ApigeneCatalog> Catalogs { get; set; } = new();
+    }
+
+    [XmlRoot(ElementName = "info")]
+    public class ApigeneInfo
+    {
+        [XmlElement(ElementName = "apigene_id")]
+        public int ApigeneId { get; set; }
+
+        [XmlElement(ElementName = "name")]
+        public string Name { get; set; } = string.Empty;
+
+        [XmlElement(ElementName = "name_english")]
+        public string NameEnglish { get; set; } = string.Empty;
+
+        [XmlElement(ElementName = "common_rate")]
+        public int CommonRate { get; set; }
+
+        [XmlElement(ElementName = "uncommon_rate")]
+        public int UncommonRate { get; set; }
+
+        [XmlElement(ElementName = "rare_rate")]
+        public int RareRate { get; set; }
+
+        [XmlElement(ElementName = "price")]
+        public int Price { get; set; }
+
+        [XmlElement(ElementName = "no_duplicate")]
+        public bool NoDuplicate { get; set; }
+    }
+
+    [XmlRoot(ElementName = "catalog")]
+    public class ApigeneCatalog
+    {
+        [XmlElement(ElementName = "apigene_id")]
+        public int ApigeneId { get; set; }
+
+        [XmlElement(ElementName = "rarity")]
+        public int Rarity { get; set; }
+
+        [XmlElement(ElementName = "item_type")]
+        public int ItemType { get; set; }
+
+        [XmlElement(ElementName = "item_id")]
+        public int ItemId { get; set; }
+    }
+
+    [XmlRoot(ElementName = "music")]
+    public class MusicOverrideElement
+    {
+        // info entries are music override info/chart blocks; serialized loosely.
+        [XmlElement(ElementName = "info")]
+        public List<MusicOverrideInfo> Infos { get; set; } = new();
+    }
+
+    public class MusicOverrideInfo
+    {
+        // Loose catch-all: rendered as attributes/children by custom serializer.
+        [XmlAnyElement]
+        public System.Xml.XmlElement[]? Elements { get; set; }
+    }
+
+    [XmlRoot(ElementName = "weekly_music")]
+    public class WeeklyMusicInfo
+    {
+        [XmlElement(ElementName = "week_id")]
+        public int WeekId { get; set; }
+
+        [XmlElement(ElementName = "music_id")]
+        public int MusicId { get; set; }
+
+        [XmlElement(ElementName = "time_start")]
+        public ulong TimeStart { get; set; }
+
+        [XmlElement(ElementName = "time_end")]
+        public ulong TimeEnd { get; set; }
     }
 
     [XmlRoot(ElementName = "valgene")]

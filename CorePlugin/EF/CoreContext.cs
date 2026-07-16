@@ -12,21 +12,57 @@ namespace CorePlugin.EF
         internal DbSet<Card> Cards { get; set; }
         internal DbSet<Facility> Facilities { get; set; }
 
+        private static string? _cachedConnectionString;
+        private static MariaDbServerVersion? _cachedServerVersion;
+        private static readonly object _configLock = new();
+
         public CoreContext()
         {
-
         }
 
         public CoreContext(DbContextOptions<CoreContext> options) : base(options)
         {
         }
 
+        /// <summary>
+        /// Resolves the Core DB connection string once (caching the MariaDB server
+        /// version so <c>new CoreContext()</c> does not re-read config / re-detect the
+        /// server version on every request). The connection string can be overridden
+        /// through the <c>STELLA_CORE_DB</c> environment variable to avoid committing
+        /// credentials; otherwise <c>plugins/plugin_core.json</c> is used.
+        /// </summary>
+        public static (string ConnectionString, MariaDbServerVersion ServerVersion) ResolveConfiguration()
+        {
+            if (_cachedConnectionString is not null)
+                return (_cachedConnectionString, _cachedServerVersion!);
+
+            lock (_configLock)
+            {
+                if (_cachedConnectionString is not null)
+                    return (_cachedConnectionString, _cachedServerVersion!);
+
+                var config = new ConfigurationBuilder()
+                    .AddJsonFile(Path.Combine(Directory.GetCurrentDirectory(), "plugins", "plugin_core.json"), optional: true)
+                    .Build();
+                var coreConfig = config.Get<CorePluginConfig>() ?? new CorePluginConfig();
+
+                var connStr = Environment.GetEnvironmentVariable("STELLA_CORE_DB");
+                if (string.IsNullOrWhiteSpace(connStr))
+                    connStr = coreConfig.DbConnectionString;
+                if (string.IsNullOrWhiteSpace(connStr))
+                    throw new InvalidOperationException(
+                        "CorePlugin DB connection string is not configured. Set the STELLA_CORE_DB environment variable or plugins/plugin_core.json.");
+
+                _cachedConnectionString = connStr;
+                _cachedServerVersion = new MariaDbServerVersion(ServerVersion.AutoDetect(connStr));
+                return (_cachedConnectionString, _cachedServerVersion!);
+            }
+        }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            var config = new ConfigurationBuilder().AddJsonFile(Path.Combine(Directory.GetCurrentDirectory(), "plugins", "plugin_core.json")).Build();
-            var coreConfig = config.Get<CorePluginConfig>();
-            optionsBuilder.UseMySql(coreConfig.DbConnectionString,
-                new MariaDbServerVersion(ServerVersion.AutoDetect(coreConfig.DbConnectionString)));
+            var (connStr, serverVersion) = ResolveConfiguration();
+            optionsBuilder.UseMySql(connStr, serverVersion);
         }
 
         protected override void OnModelCreating(ModelBuilder builder)

@@ -101,6 +101,19 @@ public partial class SvProfile
 
     public int Version { get; set; }
 
+    /// <summary>v7 migration support fields (asphyxia parity).</summary>
+    public int Akaname { get; set; }
+
+    public int BplSupport { get; set; }
+
+    public int CreatorItem { get; set; }
+
+    public int Datecode { get; set; }
+
+    public int PluginVer { get; set; }
+
+    public int DbVer { get; set; }
+
     public virtual ICollection<SvItem> SvItems { get; } = new List<SvItem>();
 
     public virtual ICollection<SvParam> SvParams { get; } = new List<SvParam>();
@@ -112,4 +125,10 @@ public partial class SvProfile
     public virtual ICollection<SvValgeneTicket> SvValgeneTickets { get; } = new List<SvValgeneTicket>();
 
     public virtual ICollection<SvMatchmaker> SvMatchmakers { get; } = new List<SvMatchmaker>();
+
+    public virtual ICollection<SvArena> SvArenas { get; } = new List<SvArena>();
+
+    public virtual ICollection<SvVariantPower> SvVariantPowers { get; } = new List<SvVariantPower>();
+
+    public virtual ICollection<SvSkill> SvSkills { get; } = new List<SvSkill>();
 }

@@ -1,116 +1,262 @@
-# server
+# Stella
 
-Stella is an **unofficial implementation of Konami's e-amusement server**.  
+Stella is an **unofficial implementation of Konami's e-amusement server**.
 
 ## Features
 - Partial implementation of e-amusement protocol
 - Data exchange between client and server
 - Modular and extensible architecture
 - Plugin support
+- SOUND VOLTEX EXCEED GEAR (sv6) + NABLA (sv7) unified handler support
+- Automatic v6→v7 profile migration
+- Docker Compose one-command deployment
 
-## Currently Enabled Plugins
-- Core Plugin
-- KFC Plugin
+## Plugins
+
+### Core Plugin
+Built-in handlers shared across all games.
+
+| Service | Method | Description |
+|---|---|---|
+| `cardmng` | `inquire` | Check if card is registered |
+| `cardmng` | `getrefid` | Get/create refid for card |
+| `cardmng` | `authpass` | Authenticate card password |
+| `cardmng` | `bindmodel` | Bind profile to game code |
+| `eacoin` | `checkin` | PASELI session start |
+| `eacoin` | `consume` | PASELI payment |
+| `eacoin` | `checkout` | PASELI session end |
+| `facility` | `get` | Facility/cabinet info |
+| `services` | `get` | Server URL list (keepalive, all endpoints) |
+| `message` | `get` | Server messages |
+| `package` | `list` | Package list |
+| `pcbevent` | `put` | PCB event |
+| `pcbtracker` | `alive` | PCB keepalive |
+| `eventlog` | `write` | Event log |
+| `tax` | `get_phase` | Tax phase (stub: phase=0) |
+| `dlstatus` | `progress` | Download status (stub) |
+| `posevent` | `income.sales.sale` | POS event (stub) |
+| `ins` | `netlog` | Net log (stub) |
+
+### KFC Plugin (SOUND VOLTEX)
+All handlers serve both sv6 (EXCEED GEAR) and sv7 (NABLA) from unified classes.
+
+| Service | Method | Description |
+|---|---|---|
+| `game` | `sv6_common` / `sv7_common` | Events, courses, valgene, apigene, arena, extend, music_limited |
+| `game` | `sv6_new` / `sv7_new` | Create profile (v7 triggers ViiMigrate if v6 exists) |
+| `game` | `sv6_load` / `sv7_load` | Load profile (items, params, courses, arena, variant_gate, etc.) |
+| `game` | `sv6_load_m` / `sv7_load_m` | Load scores (v6=21 params, v7=26 params with volforce) |
+| `game` | `sv6_load_r` / `sv7_load_r` | Load rival data |
+| `game` | `sv6_save` / `sv7_save` | Save profile + items + params + skill + arena + variant_gate |
+| `game` | `sv6_save_m` / `sv7_save_m` | Save scores (multi-track, clear-lamp remap for v6) |
+| `game` | `sv6_save_c` / `sv7_save_c` | Save course record |
+| `game` | `sv6_save_e` / `sv7_save_e` | Save extra (weekly music) |
+| `game` | `sv6_save_pb` / `sv7_save_pb` | Save policy break |
+| `game` | `sv6_save_valgene` / `sv7_save_valgene` | Save valgene (gacha) items |
+| `game` | `sv6_save_mega` / `sv7_save_mega` | Stub |
+| `game` | `sv6_frozen` / `sv7_frozen` | Stub |
+| `game` | `sv6_buy` / `sv7_buy` | Purchase items with gamecoin |
+| `game` | `sv6_print` / `sv7_print` | Print genesis cards |
+| `game` | `sv6_hiscore` / `sv7_hiscore` | All-time high scores |
+| `game` | `sv6_lounge` / `sv7_lounge` | Online matchmaking lounge |
+| `game` | `sv6_shop` / `sv7_shop` | Shop (returns nxt_time) |
+| `game` | `sv6_play_e` / `sv7_play_e` | Stub |
+| `game` | `sv6_play_s` / `sv7_play_s` | Stub |
+| `game` | `sv6_entry_s` / `sv7_entry_s` | Online matchmaking (in-memory room system) |
+| `game` | `sv6_entry_e` / `sv7_entry_e` | Entry end (stub) |
+| `game` | `sv6_exception` / `sv7_exception` | Stub |
+| `game` | `sv6_log` / `sv7_log` | Stub |
+
+**Total: 66 handlers** (18 core + 48 KFC)
 
 ## Requirements
 - .NET SDK 10
 - Supported OS: Windows, Linux
-- MariaDB
+- MariaDB 10.5+ / MySQL 8+
+- `KBinXml.Net` git submodule (commit 73d1b9a) — do NOT replace with NuGet package
 
-## Installation & Usage
+## Quick Start (Docker)
+
 ```bash
-# Clone the repository
-git clone https://gitlab.lunalight.place/stella/server.git
-cd server
-
-# Build the project
-dotnet build
-
-# Run the server
-dotnet run
+git clone --recurse-submodules <repo-url>
+cd stella
+docker compose up --build
 ```
 
+The server listens on `http://localhost:8080`. MariaDB starts alongside with `stella_kfc` and `stella_core` databases pre-created. EF migrations and static-data seeding run automatically on first boot.
 
-## Inital migration
+### Configuration (env vars)
 
-You must **Run server once**
+| Env var | Default | Description |
+|---|---|---|
+| `STELLA_KFC_DB` | `Server=db;...Database=stella_kfc` | KFC plugin DB connection |
+| `STELLA_CORE_DB` | `Server=db;...Database=stella_core` | Core plugin DB connection |
+| `STELLA_SERVER_URL` | `http://10.0.1.133:8080/eamuse` | Base URL returned by `services.get` |
+| `STELLA_SERVER_HOST` | `10.0.1.133` | Keepalive host |
+| `STELLA_KFC_UNLOCK_ALL_SONGS` | `true` | Unlock all songs |
+| `STELLA_KFC_ARENA_OPEN` | `true` | Keep arena open |
+| `STELLA_KFC_ARENA_NO_ENDTIME` | `true` | Arena no end time |
+| `STELLA_KFC_ARENA_SESSION` | `22` | Arena session set |
+| `STELLA_KFC_ARENA_STATION` | `None` | Arena station set |
+| `STELLA_KFC_USE_BLASTERPASS` | `true` | Use BLASTER PASS |
+| `STELLA_KFC_UNLOCK_ALL_NAVIGATORS` | `false` | Unlock navigators |
+| `STELLA_KFC_UNLOCK_ALL_APPEAL_CARDS` | `false` | Unlock appeal cards |
+| `STELLA_KFC_UNLOCK_ALL_VALK_ITEMS` | `false` | Unlock customization items |
+
+### music_db.xml
+
+The KFC plugin loads `Data/Seed/music_db.xml` (shift_jis, ~8.4MB) into the `sv_music` table at startup. This file is NOT committed (too large). Provide it via docker-compose volume mount:
+
+```yaml
+volumes:
+  - ./StellaKFCPlugin/Data/Seed/music_db.xml:/app/Data/Seed/music_db.xml:ro
+```
+
+Or place it in `StellaKFCPlugin/Data/Seed/music_db.xml` locally.
+
+## Manual Build & Run (without Docker)
+
+### 1. Prerequisites
+
+- .NET SDK 10 (`dotnet --version` should report 10.x)
+- MariaDB or MySQL running and accessible
+- `dotnet-ef` tool installed:
+  ```bash
+  dotnet tool install --global dotnet-ef --version 10.0.2
+  ```
+
+### 2. Clone
+
+```bash
+git clone --recurse-submodules <repo-url>
+cd stella
+```
+
+If you forgot `--recurse-submodules`:
+```bash
+git submodule update --init --recursive
+```
+
+### 3. Create databases
+
 ```sql
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET NAMES utf8 */;
-/*!50503 SET NAMES utf8mb4 */;
-/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
-/*!40103 SET TIME_ZONE='+00:00' */;
-/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
-/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
-/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
-
--- 테이블 데이터 stella.sv_events:~55 rows (대략적) 내보내기
-INSERT INTO `sv_events` (`id`, `event`, `enabled`, `version`) VALUES
-	(1, 'DEMOGAME_PLAY', 1, 6),
-	(2, 'MATCHING_MODE', 1, 6),
-	(3, 'MATCHING_MODE_FREE_IP', 1, 6),
-	(4, 'LEVEL_LIMIT_EASING', 1, 6),
-	(5, 'ACHIEVEMENT_ENABLE', 1, 6),
-	(6, 'APICAGACHADRAW\\t30', 1, 6),
-	(7, 'VOLFORCE_ENABLE', 1, 6),
-	(8, 'AKANAME_ENABLE', 1, 6),
-	(9, 'PAUSE_ONLINEUPDATE', 1, 6),
-	(10, 'CONTINUATION', 1, 6),
-	(11, 'TENKAICHI_MODE', 0, 6),
-	(12, 'QC_MODE', 0, 6),
-	(13, 'KAC_MODE', 0, 6),
-	(14, 'DISABLE_MONITOR_ID_CHECK', 1, 6),
-	(15, 'FAVORITE_APPEALCARD_MAX\\t200', 1, 6),
-	(16, 'FAVORITE_MUSIC_MAX\\t200', 1, 6),
-	(17, 'STANDARD_UNLOCK_ENABLE', 1, 6),
-	(18, 'PLAYERJUDGEADJ_ENABLE', 1, 6),
-	(19, 'MIXID_INPUT_ENABLE', 1, 6),
-	(20, 'DISP_PASELI_BANNER', 1, 6),
-	(21, 'CHARACTER_IGNORE_DISABLE\\t122,123,131,139,140,143,149,160,162,163,164,167,170,174,175', 1, 6),
-	(22, 'STAMP_IGNORE_DISABLE\\t273~312,773~820,993~1032,1245~1284,1469~1508,1585~1632,1633~1672,1737~1776,1777~1816,1897~1936', 1, 6),
-	(23, 'SUBBG_IGNORE_DISABLE\\t166~185,281~346,369~381,419~438,464~482,515~552,595~616,660~673,714~727', 1, 6),
-	(24, 'BEGINNER_MUSIC_FOLDER\\t56,78,80,86,87,91,111,128,134,275,278,180,697,770,769,779,842,948,940,1057,1056,1096,932,1136,1469,1480', 1, 6),
-	(25, 'BEGINNER_MUSIC_FOLDER\\t1471,1758,1753,1739,1867,1866,1860,1857,1903,1904,1859,1863,1856,1864,1865,1916,1917,1914,1915,1918,1960', 1, 6),
-	(26, 'BEGINNER_MUSIC_FOLDER\\t1961,1962,2029,2028,2030,2031,2035,2036,1905,1882,2058,2073,2070,2069,2074,2075,2067,2068,2066,2165,2166', 1, 6),
-	(27, 'BEGINNER_MUSIC_FOLDER\\t2174,2175,2193,2195,2196,2213,2216,2214,2215,2205,2206,2224,2229,2228,2230,2241,2244,2243,2242,2245,2240', 1, 6),
-	(28, 'BEGINNER_MUSIC_FOLDER\\t2251,2252,2220,2221,2289,2288,2291,2287,2290', 1, 6),
-	(29, 'OMEGA_ENABLE\\t1,2,3,4,5,6,7,8,9', 1, 6),
-	(30, 'OMEGA_ARS_ENABLE', 1, 6),
-	(31, 'HEXA_ENABLE\\t1,2,3,4,5,6,7,8,9,10,11,12', 1, 6),
-	(32, 'HEXA_OVERDRIVE_ENABLE\\t8', 1, 6),
-	(33, 'SKILL_ANALYZER_ABLE', 1, 6),
-	(34, 'BLASTER_ABLE', 1, 6),
-	(35, 'PREMIUM_TIME_ENABLE', 1, 6),
-	(36, 'MEGAMIX_ENABLE', 1, 6),
-	(37, 'ARENA_ENABLE', 1, 6),
-	(38, 'ARENA_LOCAL_TO_ONLINE_ENABLE', 1, 6),
-	(39, 'ARENA_ALTER_MODE_WINDOW_ENABLE', 1, 6),
-	(40, 'ARENA_PASS_MATCH_WINDOW_ENABLE', 1, 6),
-	(41, 'ARENA_VOTE_MODE_ENABLE', 1, 6),
-	(42, 'ARENA_LOCAL_ULTIMATE_MATCH_ALWAYS', 1, 6),
-	(43, 'MEGAMIX_BATTLE_MATCH_ENABLE', 1, 6),
-	(44, 'DISABLED_MUSIC_IN_ARENA_ONLINE', 1, 6),
-	(45, 'SINGLE_BATTLE_ENABLE', 1, 6),
-	(46, 'GENERATOR_ABLE', 1, 6),
-	(47, 'CREW_SELECT_ABLE', 1, 6),
-	(48, 'VALGENE_ENABLE', 1, 6),
-	(49, 'PLAYER_RADAR_ENABLE', 1, 6),
-	(50, 'S_PUC_EFFECT_ENABLE', 1, 6),
-	(51, 'FAVORITE_CREW_ENABLE', 1, 6),
-	(52, 'TAMAADV_VALGENE_BONUS_ENABLE', 1, 6),
-	(53, 'DEMOLOOP_INFORMATION\\tdemo_info/250220_generator_pekora_demo.png', 1, 6),
-	(54, 'ULTIMATE_MATCH_PLAYABLE_ALWAYS', 0, 6),
-	(55, 'OVER_POWER_ENABLE', 0, 6);
-
-/*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
-/*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
-/*!40014 SET FOREIGN_KEY_CHECKS=IFNULL(@OLD_FOREIGN_KEY_CHECKS, 1) */;
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40111 SET SQL_NOTES=IFNULL(@OLD_SQL_NOTES, 1) */;
-
+CREATE DATABASE stella_kfc;
+CREATE DATABASE stella_core;
+CREATE USER 'stella'@'%' IDENTIFIED BY 'stella';
+GRANT ALL PRIVILEGES ON stella_kfc.* TO 'stella'@'%';
+GRANT ALL PRIVILEGES ON stella_core.* TO 'stella'@'%';
+FLUSH PRIVILEGES;
 ```
 
-## Deps
+### 4. Configure plugin configs
+
+Copy the example configs and edit the DB connection strings:
+
+```bash
+cp CorePlugin/plugin_core.example.json Stella/bin/Debug/net10.0/plugins/plugin_core.json
+cp StellaKFCPlugin/plugin_kfc.example.json Stella/bin/Debug/net10.0/plugins/plugin_kfc.json
+```
+
+Edit `plugin_core.json`:
+```json
+{
+  "enabled": true,
+  "db": "server=localhost;port=3306;database=stella_core;user id=stella;password=stella",
+  "maintenance": false
+}
+```
+
+Edit `plugin_kfc.json`:
+```json
+{
+  "enabled": true,
+  "db": "server=localhost;port=3306;database=stella_kfc;user id=stella;password=stella",
+  "unlock_all_songs": true,
+  "arena_open": true,
+  "arena_no_endtime": true,
+  "arena_session": 22,
+  "arena_station": "None",
+  "use_blasterpass": true
+}
+```
+
+Alternatively, use environment variables instead of JSON files:
+```bash
+export STELLA_KFC_DB="server=localhost;port=3306;database=stella_kfc;user id=stella;password=stella"
+export STELLA_CORE_DB="server=localhost;port=3306;database=stella_core;user id=stella;password=stella"
+export STELLA_SERVER_URL="http://YOUR_SERVER_IP:8080/eamuse"
+export STELLA_SERVER_HOST="YOUR_SERVER_IP"
+```
+
+### 5. Place music_db.xml
+
+```bash
+# Place music_db.xml (shift_jis, ~8.4MB) in the seed directory
+cp /path/to/music_db.xml StellaKFCPlugin/Data/Seed/music_db.xml
+```
+
+### 6. Build
+
+```bash
+dotnet build Stella.slnx
+```
+
+### 7. Apply migrations (optional — server does this automatically)
+
+```bash
+dotnet ef database update --project StellaKFCPlugin --startup-project Stella.MigrationHelper
+```
+
+### 8. Run
+
+```bash
+# Default port 80
+dotnet run --project Stella
+
+# Or specify a port
+ASPNETCORE_URLS=http://+:8080 dotnet run --project Stella
+```
+
+The server will:
+1. Apply EF migrations (`Database.Migrate()`)
+2. Seed `sv_static_*` tables from `Data/Seed/asphyxia_data.json`
+3. Load `music_db.xml` into `sv_music`
+
+### 9. Verify
+
+```bash
+curl http://localhost:8080/
+# HTTP 404 is normal (server only handles POST to /eamuse and /core)
+```
+
+## KFC Plugin — EXCEED GEAR + NABLA
+
+The KFC plugin serves both sv6 (EXCEED GEAR) and sv7 (NABLA) from unified handler classes. Each handler method branches on the game version derived from the e-amusement `model` string.
+
+### Static Data
+
+Static game data (events, courses, valgene, apigene, arena, extend, information, music_limited, ...) is stored in EF tables (`sv_static_*`) and seeded from `Data/Seed/asphyxia_data.json` — an extract of the asphyxia plugin's `data/exg.ts`, `data/nbl.ts`, `data/ii.ts`, `data/booth.ts`. Seeding is idempotent.
+
+### v6 → v7 Migration
+
+When a v6 (EXCEED GEAR) profile exists and v7 (NABLA) `new` is called, the plugin automatically migrates the profile: copies profile/items/params/scores, remaps clear lamps, recomputes volforce, and resets EX scores for charts Konami reset between versions.
+
+## Migrations
+
+```bash
+# Add a migration
+dotnet ef migrations add <Name> --project StellaKFCPlugin --startup-project Stella.MigrationHelper
+
+# Apply to database
+dotnet ef database update --project StellaKFCPlugin --startup-project Stella.MigrationHelper
+
+# Generate idempotent SQL script (for manual deployment)
+dotnet ef migrations script --idempotent --project StellaKFCPlugin --startup-project Stella.MigrationHelper
+```
+
+Or just run the server — `OnAppInitialize` calls `Database.Migrate()` automatically.
+
+## Credits
 
 Originally coded by [KBinXml.Net By Milkitic](https://github.com/Milkitic/KBinXml.Net)
 Stella coded to add types when serialization

@@ -21,7 +21,7 @@ namespace StellaKFCPlugin.Models
         public string LocId { get; set; }
 
         [XmlElement(ElementName = "track")]
-        public Track Track { get; set; } = new();
+        public List<Track> Tracks { get; set; } = new();
     }
 
     [XmlRoot(ElementName = "track")]
@@ -79,6 +79,9 @@ namespace StellaKFCPlugin.Models
 
         [XmlElement(ElementName = "vol_rate")]
         public int VolRate { get; set; }
+
+        [XmlElement(ElementName = "volforce")]
+        public int Volforce { get; set; }
 
         [XmlElement(ElementName = "mode")]
         public byte Mode { get; set; }

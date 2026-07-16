@@ -22,7 +22,7 @@ namespace Stella
 
             builder.Services.AddControllers();
 
-            builder.WebHost.UseUrls("http://+:80");
+            builder.WebHost.UseUrls(Environment.GetEnvironmentVariable("ASPNETCORE_URLS") ?? "http://+:80");
 
             var pluginService =
                 new PluginService(LoggerFactory.Create(x => x.AddConsole()).CreateLogger<PluginService>());
@@ -61,12 +61,26 @@ namespace Stella
                     // Get processed EAMUSE data from middleware
                     var eAmuseData = httpContext.Items["ea"] as EAmuseXrpcData;
 
+                    // Validate the routing query parameter "f" (<service>.<method>)
+                    if (string.IsNullOrWhiteSpace(f) || f.IndexOf('.') < 0)
+                    {
+                        logger.LogWarning("Invalid or missing 'f' query parameter: {f}", f ?? "<null>");
+                        return;
+                    }
+
+                    var fParts = f.Split('.', 2);
+                    var service = fParts[0];
+                    var method1 = fParts[1];
+
                     //TODO ADD PCBID Checking here
                     logger.LogInformation(model);
-                    // Invoke handler from loaded plugins
-                    var service = f.Split('.')[0];
-                    var method1 = f.Split('.')[1];
-                    
+
+                    if (eAmuseData == null)
+                    {
+                        logger.LogWarning("No EAMUSE data available for {service}/{method1}", service, method1);
+                        return;
+                    }
+
                     try
                     {
                         var result = pluginService.InvokeHandler(service, method1, eAmuseData.Document, model, httpContext);
@@ -163,11 +177,25 @@ namespace Stella
                     // Get processed EAMUSE data from middleware
                     var eAmuseData = httpContext.Items["ea"] as EAmuseXrpcData;
 
+                    // Validate the routing query parameter "f" (<service>.<method>)
+                    if (string.IsNullOrWhiteSpace(f) || f.IndexOf('.') < 0)
+                    {
+                        logger.LogWarning("Invalid or missing 'f' query parameter: {f}", f ?? "<null>");
+                        return;
+                    }
+
+                    var fParts = f.Split('.', 2);
+                    var service = fParts[0];
+                    var method1 = fParts[1];
+
                     //TODO ADD PCBID Checking here
                     logger.LogInformation(model);
-                    // Invoke handler from loaded plugins
-                    var service = f.Split('.')[0];
-                    var method1 = f.Split('.')[1];
+
+                    if (eAmuseData == null)
+                    {
+                        logger.LogWarning("No EAMUSE data available for {service}/{method1}", service, method1);
+                        return;
+                    }
 
                     try
                     {
@@ -297,12 +325,13 @@ namespace Stella
                 // Add __type attributes to all elements based on the response type
                 document.AddKBinTypesFromResponse(res);
 
-                // Console.WriteLine(document);
+                try { System.IO.File.WriteAllText("/tmp/debug_response.xml", document.ToString()); } catch { }
+                Console.WriteLine("DEBUG response XML: " + document.ToString());
                 byte[] resData;
                 if (data.Encoding != null)
-                    resData = KbinConverter.Write(document, data.Encoding.ToKnownEncoding());
+                    resData = KbinConverter.Write(document, data.Encoding.ToKnownEncoding(), new WriteOptions());
                 else
-                    resData = KbinConverter.Write(document, KnownEncodings.ShiftJIS);
+                    resData = KbinConverter.Write(document, KnownEncodings.ShiftJIS, new WriteOptions());
 
                 // Console.WriteLine(KbinConverter.ReadXmlLinq(resData));
 
@@ -337,48 +366,10 @@ namespace Stella
 
         private static async Task<(byte[] ResponseData, int length, string compressionAlgo)> WriteEAmuseExceptionResponseAsync(Stream originalStream, HttpContext context, int code)
         {
-            var (rawData, compAlgo, eAmuseInfo) = await Task.Run(() =>
-            {
-                var sb = new StringBuilder();
-                var sw = new StringWriter(sb);
-                XmlWriter writer = new XmlTextWriter(sw);
+            var data = context.Items["ea"] as EAmuseXrpcData;
+            string? eAmuseInfo = data?.EAmuseInfo;
 
-                writer.WriteStartElement("response");
-                writer.WriteAttributeString("status", code.ToString());
-                var data = context.Items["ea"] as EAmuseXrpcData;
-
-                writer.WriteEndElement();
-
-                XDocument document = XDocument.Parse(sb.ToString());
-
-                // Add __type attributes to all elements based on their values
-                // Note: For exception response, there are no data elements to add types to
-
-                Console.WriteLine(document);
-
-                byte[] resData;
-                if (data.Encoding != null)
-                    resData = KbinConverter.Write(document, data.Encoding.ToKnownEncoding());
-                else
-                    resData = KbinConverter.Write(document, KnownEncodings.ShiftJIS);
-
-                string algo = "none";
-
-                // Try compression
-                byte[] compressed = LZ77.Compress(resData, 32);
-                if (compressed.Length < resData.Length)
-                {
-                    resData = compressed;
-                    algo = "lz77";
-                }
-
-                // Apply encryption if needed
-                string eAmuseInfoValue = data.EAmuseInfo;
-                if (eAmuseInfoValue != null)
-                    RC4.ApplyEAmuseInfo(eAmuseInfoValue, resData);
-
-                return (resData, algo, eAmuseInfoValue);
-            });
+            var (rawData, compAlgo) = await Task.Run(() => EAmuseResponseWriter.BuildStatusResponse(code, eAmuseInfo));
 
             // Set response headers
             if (eAmuseInfo != null)

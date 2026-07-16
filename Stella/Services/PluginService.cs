@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Xml.Linq;
 using System.Xml.Serialization;
@@ -9,8 +10,9 @@ namespace Stella.Services
     public class PluginService(ILogger<PluginService> logger)
     {
         private readonly List<IStellaPlugin> _loadedPlugins = new();
-        private readonly Dictionary<string, (object Instance, MethodInfo Method, IStellaPluginConfig PluginConfig, ILogger Logger)> _handlerCache = new();
-        
+        private readonly Dictionary<string, (Type HandlerType, MethodInfo Method, IStellaPluginConfig PluginConfig, ILogger Logger)> _handlerCache = new();
+        private static readonly ConcurrentDictionary<Type, XmlSerializer> _serializerCache = new();
+
         public IReadOnlyList<IStellaPlugin> LoadedPlugins => _loadedPlugins.AsReadOnly();
 
     public async Task LoadPluginsAsync()
@@ -28,7 +30,9 @@ namespace Stella.Services
                 var assembly = Assembly.Load(await File.ReadAllBytesAsync(dll));
                 logger.LogInformation($"Loaded plugin assembly: {assembly.FullName}");
 
-                // Load IStellaPlugin implementations
+                // Load IStellaPlugin implementations only.
+                // Handler classes are cached later by RegisterPluginConfig, once each
+                // plugin's configuration has been resolved (see Program.cs init order).
                 var pluginTypes = assembly.GetTypes()
                     .Where(t => typeof(IStellaPlugin).IsAssignableFrom(t) && !t.IsInterface);
 
@@ -40,38 +44,11 @@ namespace Stella.Services
                         {
                             _loadedPlugins.Add(instance);
                             logger.LogInformation($"Loaded plugin: {instance.Name} v{instance.Version}");
-                            
-                            // Cache handlers for this plugin - pass actual instance
-                            CacheHandlersFromInstance(instance, instance.PluginConfig);
                         }
                     }
                     catch (Exception ex)
                     {
                         logger.LogError($"Failed to instantiate plugin {pluginType.Name}: {ex.Message}");
-                    }
-                }
-
-                // Load handler classes (classes with HandlerAttribute methods)
-                var handlerTypes = assembly.GetTypes()
-                    .Where(t => !t.IsInterface && !t.IsAbstract && t.GetMethods()
-                        .Any(m => m.GetCustomAttribute<StellaHandlerAttribute>() != null));
-
-                foreach (var handlerType in handlerTypes)
-                {
-                    try
-                    {
-                        var instance = Activator.CreateInstance(handlerType);
-                        if (instance != null)
-                        {
-                            logger.LogInformation($"Loaded handler class: {handlerType.Name}");
-                            
-                            // Cache handler with null config (can be updated later via RegisterPluginConfig)
-                            // CacheHandlersFromInstance(instance, null);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError($"Failed to instantiate handler {handlerType.Name}: {ex.Message}");
                     }
                 }
             }
@@ -92,30 +69,22 @@ namespace Stella.Services
 
             foreach (var handlerType in handlers)
             {
-                var handlerInstance = Activator.CreateInstance(handlerType);
-                if (handlerInstance != null)
-                {
-                    CacheHandlersFromInstance(handlerInstance, config);
-                    logger.LogInformation($"Updated PluginConfig for handler {handlerType.Name}");
-                }
+                CacheHandlersFromType(handlerType, config);
             }
 
             logger.LogInformation($"Total handlers cached: {_handlerCache.Count}");
         }
 
-        private void CacheHandlersFromInstance(object instance, IStellaPluginConfig pluginConfig = null)
+        private void CacheHandlersFromType(Type handlerType, IStellaPluginConfig pluginConfig = null)
         {
-            var instanceType = instance.GetType();
-            
             // Get all public instance methods from the class and all its base classes
-            var methods = instanceType.GetMethods(
-                System.Reflection.BindingFlags.Public | 
-                System.Reflection.BindingFlags.Instance | 
-                System.Reflection.BindingFlags.IgnoreCase);
+            var methods = handlerType.GetMethods(
+                BindingFlags.Public |
+                BindingFlags.Instance);
 
             foreach (var methodInfo in methods)
             {
-                // Skip methods from base Object class and interfaces
+                // Skip methods from base Object class
                 if (methodInfo.DeclaringType == typeof(object))
                     continue;
 
@@ -123,84 +92,111 @@ namespace Stella.Services
                 if (handlerAttr != null)
                 {
                     var key = $"{handlerAttr.Service}:{handlerAttr.Module}";
-                    
+
                     if (_handlerCache.ContainsKey(key))
                     {
-                        logger.LogWarning($"Handler {key} already exists, overwriting with {instanceType.Name}.{methodInfo.Name}");
+                        logger.LogWarning($"Handler {key} already exists, overwriting with {handlerType.Name}.{methodInfo.Name}");
                     }
-                    
-                    _handlerCache[key] = (instance, methodInfo, pluginConfig, LoggerFactory.Create(x=> x.AddConsole()).CreateLogger(instanceType));
-                    logger.LogInformation($"Cached handler: {key} -> {instanceType.Name}.{methodInfo.Name}");
+
+                    _handlerCache[key] = (handlerType, methodInfo, pluginConfig, LoggerFactory.Create(x => x.AddConsole()).CreateLogger(handlerType));
+                    logger.LogInformation($"Cached handler: {key} -> {handlerType.Name}.{methodInfo.Name}");
                 }
             }
         }
 
-        public (Task<IStellaEAmuseResponse>? Result, Type ReturnType)InvokeHandler(string service, string method, XDocument requestData,string model, HttpContext context)
+        public (Task<IStellaEAmuseResponse>? Result, Type ReturnType) InvokeHandler(string service, string method, XDocument requestData, string model, HttpContext context)
         {
             var key = $"{service}:{method}";
 
-            if (_handlerCache.TryGetValue(key, out var handler))
+            if (!_handlerCache.TryGetValue(key, out var handler))
             {
-                try
-                {
-                    logger.LogDebug($"Invoking handler: {service}/{method}");
-                    
-                    // Set request data if handler is StellaHandler
-                    if (handler.Instance is StellaHandler stellaHandler && requestData?.Root != null)
-                    {
-                        var requestType = handler.Method.GetCustomAttribute<StellaHandlerAttribute>()?.RequestType;
-                        if (requestType != null)
-                        {
-                            // Pre-process XML to convert space-separated numeric arrays to individual elements
-                            PreprocessXmlForArrays(requestData);
-
-                            var serializer = new XmlSerializer(requestType);
-                            using (var reader = requestData.Root.FirstNode.CreateReader())
-                            {
-                                IStellaEAmuseRequest reqData = (IStellaEAmuseRequest)serializer.Deserialize(reader);
-                                stellaHandler.Request = reqData;
-                                stellaHandler.Model = model;
-                                stellaHandler.PluginConfig = handler.PluginConfig;
-                                stellaHandler.Logger = handler.Logger;
-                                stellaHandler.PCBId = requestData.Root.Attribute("srcid")?.Value;
-                                stellaHandler.HttpContext = context;
-                            }
-                        }
-                    }
-
-                    var returnType = handler.Method.ReturnType;
-                    var result = handler.Method.Invoke(handler.Instance, Array.Empty<object>());
-
-                    // Handle async methods (Task<T>) and sync methods
-                    if (result is Task task)
-                    {
-                        // For async methods, convert to Task<IStellaEAmuseResponse>
-                        return (ConvertTaskToGeneric(task), returnType);
-                    }
-                    else if (result is IStellaEAmuseResponse response)
-                    {
-                        // For sync methods, wrap in completed task
-                        return (Task.FromResult(response), returnType);
-                    }
-
-                    logger.LogError($"Handler returned invalid type: {result?.GetType().Name ?? "null"}");
-                    return (null, null);
-                }
-                catch (TargetInvocationException ex)
-                {
-                    // Unwrap the actual exception from reflection
-                    logger.LogError(ex.InnerException, $"Error invoking handler {service}/{method}");
-                    return (null, null);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, $"Error invoking handler {service}/{method}");
-                    return (null, null);
-                }
+                logger.LogWarning($"No handler found for {service}/{method}");
+                return (null, null);
             }
 
-            logger.LogWarning($"No handler found for {service}/{method}");
-            return (null, null);
+            try
+            {
+                logger.LogDebug($"Invoking handler: {service}/{method}");
+
+                // Create a fresh handler instance per request. Handler instances carry
+                // per-request state (Request, HttpContext, PCBId, ...) and must NOT be
+                // shared across concurrent requests.
+                var instance = Activator.CreateInstance(handler.HandlerType);
+                if (instance is not StellaHandler stellaHandler)
+                {
+                    logger.LogError($"Handler {handler.HandlerType.Name} does not extend StellaHandler");
+                    return (null, null);
+                }
+
+                if (requestData?.Root != null)
+                {
+                    var requestType = handler.Method.GetCustomAttribute<StellaHandlerAttribute>()?.RequestType;
+                    if (requestType != null)
+                    {
+                        // Pre-process XML to convert space-separated numeric arrays to individual elements
+                        PreprocessXmlForArrays(requestData);
+
+                        var serializer = GetSerializer(requestType);
+                        using (var reader = requestData.Root.FirstNode.CreateReader())
+                        {
+                            var reqData = serializer.Deserialize(reader) as IStellaEAmuseRequest;
+                            if (reqData == null)
+                            {
+                                logger.LogError($"Failed to deserialize request body for {service}/{method} ({requestType.Name})");
+                                throw new StellaHandlerException(StellaHandlerException.BadRequestCode);
+                            }
+                            stellaHandler.Request = reqData;
+                        }
+                    }
+                }
+
+                stellaHandler.Model = model;
+                stellaHandler.PluginConfig = handler.PluginConfig;
+                stellaHandler.Logger = handler.Logger;
+                stellaHandler.PCBId = requestData?.Root?.Attribute("srcid")?.Value;
+                stellaHandler.HttpContext = context;
+
+                var returnType = handler.Method.ReturnType;
+                var result = handler.Method.Invoke(instance, Array.Empty<object>());
+
+                // Handle async methods (Task<T>) and sync methods
+                if (result is Task task)
+                {
+                    // For async methods, convert to Task<IStellaEAmuseResponse>
+                    return (ConvertTaskToGeneric(task), returnType);
+                }
+                else if (result is IStellaEAmuseResponse response)
+                {
+                    // For sync methods, wrap in completed task
+                    return (Task.FromResult(response), returnType);
+                }
+
+                logger.LogError($"Handler returned invalid type: {result?.GetType().Name ?? "null"}");
+                return (null, null);
+            }
+            catch (TargetInvocationException ex)
+            {
+                // Unwrap the actual exception from reflection
+                logger.LogError(ex.InnerException, $"Error invoking handler {service}/{method}");
+                if (ex.InnerException is StellaHandlerException she)
+                    throw she;
+                return (null, null);
+            }
+            catch (StellaHandlerException)
+            {
+                // Propagate so Program.cs can build a proper e-amusement error response.
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, $"Error invoking handler {service}/{method}");
+                return (null, null);
+            }
+        }
+
+        private static XmlSerializer GetSerializer(Type requestType)
+        {
+            return _serializerCache.GetOrAdd(requestType, static t => new XmlSerializer(t));
         }
 
         /// <summary>
@@ -220,7 +216,7 @@ namespace Stella.Services
         {
             // Process all child elements
             var childElements = element.Elements().ToList();
-            
+
             foreach (var child in childElements)
             {
                 // Check if element has __count attribute (indicates it's an array)
@@ -229,27 +225,27 @@ namespace Stella.Services
                 {
                     // Split the space-separated values
                     var values = child.Value.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                    
+
                     if (values.Length > 0)
                     {
                         // Create new elements for each value
                         var elementName = child.Name.LocalName;
                         var parentElement = child.Parent;
-                        
+
                         // Get the index of current element
                         var siblings = parentElement.Elements(elementName).ToList();
                         var currentIndex = siblings.IndexOf(child);
-                        
+
                         // Remove the original element
                         child.Remove();
-                        
+
                         // Insert new elements with individual values
                         XElement insertAfter = currentIndex > 0 ? siblings[currentIndex - 1] : null;
-                        
+
                         foreach (var value in values)
                         {
                             var newElement = new XElement(child.Name, value);
-                            
+
                             // Copy attributes except __count
                             foreach (var attr in child.Attributes())
                             {
@@ -258,7 +254,7 @@ namespace Stella.Services
                                     newElement.Add(new XAttribute(attr.Name, attr.Value));
                                 }
                             }
-                            
+
                             if (insertAfter == null)
                             {
                                 parentElement.AddFirst(newElement);
@@ -267,7 +263,7 @@ namespace Stella.Services
                             {
                                 insertAfter.AddAfterSelf(newElement);
                             }
-                            
+
                             insertAfter = newElement;
                         }
                     }
@@ -305,13 +301,13 @@ namespace Stella.Services
                     logger.LogError($"Task type {t.GetType().Name} does not have a Result property");
                     return null;
                 }
-                
+
                 var result = resultProperty.GetValue(t) as IStellaEAmuseResponse;
                 if (result == null)
                 {
                     logger.LogError($"Task Result is not an IStellaEAmuseResponse: {resultProperty.GetValue(t)?.GetType().Name ?? "null"}");
                 }
-                
+
                 return result;
             }, TaskScheduler.Default);
         }

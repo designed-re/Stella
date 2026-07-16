@@ -16,7 +16,7 @@ namespace CorePlugin.Handlers
             Logger.LogDebug("Current mode: {mode}", config.RegisterMode);
 
 
-            var context = new CoreContext();
+            using var context = new CoreContext();
 
             var facility = context.Facilities.FirstOrDefault(x => x.PCBId == PCBId);
 

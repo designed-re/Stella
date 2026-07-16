@@ -16,9 +16,15 @@ public partial class SvCourseRecord
 
     public short CourseId { get; set; }
 
+    public short SkillType { get; set; }
+
+    public string KacId { get; set; } = string.Empty;
+
     public int Version { get; set; }
 
     public int Score { get; set; }
+
+    public int Exscore { get; set; }
 
     public short Clear { get; set; }
 

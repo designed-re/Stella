@@ -1,0 +1,30 @@
+# Build artifacts
+**/bin/
+**/obj/
+
+# Editor / OS
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Logs
+logs/
+*.log
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+docker-compose.*.yml
+
+# Test client output
+TestClient/bin/
+TestClient/obj/
+
+# NuGet
+**/.nuget/

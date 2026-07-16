@@ -202,7 +202,7 @@ namespace Stella.Util
                     itemList.Add(item);
                 }
 
-                if (itemList.Count > 0 && listElements.Count > 0)
+                if (listElements.Count > 0)
                 {
                     var firstElem = listElements[0];
                     var kbinType = GetKBinType(elementType, property.Name);
@@ -212,7 +212,8 @@ namespace Stella.Util
                         // Set __type attribute
                         firstElem.SetAttributeValue("__type", kbinType);
                         
-                        // Set __count attribute
+                        // Set __count attribute (even for empty arrays â€” asphyxia
+                        // renders __count=0 so the game doesn't crash on missing nodes).
                         firstElem.SetAttributeValue("__count", itemList.Count.ToString());
                         
                         // Combine all values as space-separated string
@@ -265,15 +266,15 @@ namespace Stella.Util
             if (xmlElementAttr?.ElementName != null)
                 return xmlElementAttr.ElementName;
 
-            // Otherwise, convert property name from plural to singular or use default naming
-            // Infos ¡æ info, Items ¡æ item, etc.
+            // Otherwise, use snake_case conversion (OverRadar -> over_radar,
+            // Param -> param, Infos -> info, etc.)
             var name = propertyName;
             if (name.EndsWith("ies"))
                 name = name.Substring(0, name.Length - 3) + "y";
             else if (name.EndsWith("s") && !name.EndsWith("ss"))
                 name = name.Substring(0, name.Length - 1);
 
-            return ConvertToXmlElementName(name);
+            return ConvertToSnakeCaseElementName(name);
         }
 
         private static XElement FindChildElement(XElement parent, string propertyName)
@@ -296,7 +297,7 @@ namespace Stella.Util
             if (caseInsensitiveMatch != null)
                 return caseInsensitiveMatch;
 
-            // Try snake_case conversion (MusicLimited ¡æ music_limited)
+            // Try snake_case conversion (MusicLimited ï¿½ï¿½ music_limited)
             var snakeCaseName = ConvertToSnakeCaseElementName(propertyName);
             var snakeCaseMatch = parent.Elements()
                 .FirstOrDefault(e => e.Name.LocalName.Equals(snakeCaseName, StringComparison.OrdinalIgnoreCase));
@@ -316,9 +317,9 @@ namespace Stella.Util
         private static string ConvertToSnakeCaseElementName(string propertyName)
         {
             // Convert PascalCase to snake_case
-            // MusicLimited ¡æ music_limited
-            // SkillLevel ¡æ skill_level
-            // ValgeneId ¡æ valgene_id
+            // MusicLimited ï¿½ï¿½ music_limited
+            // SkillLevel ï¿½ï¿½ skill_level
+            // ValgeneId ï¿½ï¿½ valgene_id
             
             if (string.IsNullOrEmpty(propertyName))
                 return propertyName;
@@ -386,12 +387,18 @@ namespace Stella.Util
 
         private static string GetKBinType(Type type, string propertyName = null, string value = null)
         {
-            // Check if property name suggests it's an IP address
-            if (!string.IsNullOrEmpty(propertyName) && 
-                (propertyName.Contains("ip", StringComparison.OrdinalIgnoreCase) || 
-                 propertyName.Contains("Ip", StringComparison.Ordinal)))
+            // Check if property name suggests it's an IP address â€” only match
+            // exact "ip" or "gip"/"lip" (e-amusement IP fields), not substrings
+            // like "handtrip" or "ship" which contain "ip" incidentally.
+            if (!string.IsNullOrEmpty(propertyName))
             {
-                return "ip4";
+                var lower = propertyName.ToLowerInvariant();
+                if (lower == "ip" || lower == "gip" || lower == "lip" ||
+                    lower.EndsWith("_ip") || lower.EndsWith("ipaddr") ||
+                    lower.EndsWith("ip_addr"))
+                {
+                    return "ip4";
+                }
             }
 
             // Check if value looks like an IP address (IPv4)

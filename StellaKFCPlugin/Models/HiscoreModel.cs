@@ -69,6 +69,24 @@ namespace StellaKFCPlugin.Models
 
         [XmlElement(ElementName = "l_sc")]
         public uint LScore { get; set; }
+
+        [XmlElement(ElementName = "ax_sq")]
+        public string AxSqSequence { get; set; }
+
+        [XmlElement(ElementName = "ax_nm")]
+        public string AxNameId { get; set; }
+
+        [XmlElement(ElementName = "ax_sc")]
+        public uint AxScore { get; set; }
+
+        [XmlElement(ElementName = "lx_sq")]
+        public string LxSqSequence { get; set; }
+
+        [XmlElement(ElementName = "lx_nm")]
+        public string LxNameId { get; set; }
+
+        [XmlElement(ElementName = "lx_sc")]
+        public uint LxScore { get; set; }
     }
 }
 

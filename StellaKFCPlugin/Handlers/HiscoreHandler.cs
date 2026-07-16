@@ -1,71 +1,69 @@
-﻿using CorePlugin.EF;
-using CorePlugin.Models;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using Stella.Abstractions.Plugins;
 using StellaKFCPlugin.EF;
 using StellaKFCPlugin.Models;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Xml.Linq;
-using Stella.Abstractions;
+using StellaKFCPlugin.Util;
 
 namespace StellaKFCPlugin.Handlers
 {
+    /// <summary>
+    /// Unified <c>hiscore</c> handler (sv6/sv7). Ported from asphyxia
+    /// kfc/handlers/features.ts: aggregates per-chart top score/exscore across
+    /// all profiles of the requested version and emits an <c>sc.d</c> list.
+    /// </summary>
     public class HiscoreHandler : StellaHandler
     {
         [StellaHandler("game", "sv6_hiscore", typeof(HiscoreRequest))]
-        public async Task<HiscoreResponse> Hiscore()
+        public async Task<HiscoreResponse> Hiscore() => await HiscoreInternal(6);
+
+        [StellaHandler("game", "sv7_hiscore", typeof(HiscoreRequest))]
+        public async Task<HiscoreResponse> HiscoreNabla() => await HiscoreInternal(7);
+
+        private async Task<HiscoreResponse> HiscoreInternal(int gameVersion)
         {
+            using var db = new StellaKFCContext();
+            var response = new HiscoreResponse { ScoreElement = new HiscoreScoreElement() };
 
-            var context = new StellaKFCContext();
-            var response = new HiscoreResponse();
-
-            var allScores = await context.SvScores
-                .Include(x => x.ProfileNavigation)
+            var scores = await db.SvScores
+                .Include(s => s.ProfileNavigation)
+                .Where(s => s.Version == gameVersion)
                 .ToListAsync();
 
-            // Get all profiles mapped by their ID
-            var profiles = await context.SvProfiles.ToListAsync();
-            var profileMap = profiles.ToDictionary(p => p.Id);
+            var profiles = await db.SvProfiles.Where(p => p.Version == gameVersion).ToDictionaryAsync(p => p.Id);
 
-            // Group scores by (MusicId, Type) and get the maximum score for each group
-            var hiscores = allScores
-                .GroupBy(s => new { s.MusicId, s.Type })
-                .Select(g => g.OrderByDescending(s => s.Score).FirstOrDefault())
-                .Where(s => s != null)
-                .ToList();
-
-            // Build the hiscore data
-            response.ScoreElement = new HiscoreScoreElement();
-            response.ScoreElement.ScoreDataList = new List<HiscoreScoreData>();
-            foreach (var score in hiscores)
+            // Group by (MusicId, Type); pick top score and top exscore (asphyxia features.ts L83-103).
+            var grouped = scores.GroupBy(s => new { s.MusicId, s.Type });
+            foreach (var g in grouped)
             {
-                if (score?.ProfileNavigation is null || !profileMap.ContainsKey(score.Profile))
-                    continue;
+                var rScore = g.OrderByDescending(x => x.Score).First();
+                var rExscore = g.OrderByDescending(x => x.Exscore).First();
+                if (!profiles.ContainsKey(rScore.Profile)) continue;
+                var pScore = profiles[rScore.Profile];
+                var pExscore = profiles.ContainsKey(rExscore.Profile) ? profiles[rExscore.Profile] : pScore;
 
-                var profile = score.ProfileNavigation;
-                var code = profile.Id.ToString("D4");
-
-                response.ScoreElement.ScoreDataList.Add(
-                    new ()
-                    {
-                        Id = (uint)score.Id,
-                        Type = (uint)score.Type,
-                        AsqSequence = code,
-                        ANameId = profile.Name,
-                        AScore = (uint)score.Score,
-                        LsqSequence = code,
-                        LNameId = profile.Name,
-                        LScore = (uint)score.Score
-                    }
-                );
+                response.ScoreElement.ScoreDataList.Add(new HiscoreScoreData
+                {
+                    Id = (uint)rScore.MusicId,
+                    Type = (uint)rScore.Type,
+                    AsqSequence = KfcVersion.IdToCode(pScore.Id),
+                    ANameId = pScore.Name,
+                    AScore = (uint)rScore.Score,
+                    LsqSequence = KfcVersion.IdToCode(pScore.Id),
+                    LNameId = pScore.Name,
+                    LScore = (uint)rScore.Score,
+                    AxSqSequence = KfcVersion.IdToCode(pExscore.Id),
+                    AxNameId = pExscore.Name,
+                    AxScore = (uint)rExscore.Exscore,
+                    LxSqSequence = KfcVersion.IdToCode(pExscore.Id),
+                    LxNameId = pExscore.Name,
+                    LxScore = (uint)rExscore.Exscore,
+                });
             }
-
             return response;
         }
-
     }
 }
