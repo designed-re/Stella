@@ -35,7 +35,7 @@ public class Sv3LoadResponse : IStellaEAmuseResponse
     public short SkillNameId { get; set; }
 
     [XmlElement(ElementName = "hidden_param")]
-    public HiddenParamElement HiddenParam { get; set; } = new();
+    public HiddenParamElement? HiddenParam { get; set; }
 
     [XmlElement(ElementName = "play_count")]
     public uint PlayCount { get; set; }
