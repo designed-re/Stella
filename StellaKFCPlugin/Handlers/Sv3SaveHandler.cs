@@ -279,4 +279,53 @@ public class Sv3SaveHandler : StellaHandler
         await db.SaveChangesAsync();
         return new SaveResponse { Status = "0" };
     }
+
+    [StellaHandler("game_3", "save_pb", typeof(SavePbRequest))]
+    public async Task<SavePbResponse> SavePbGame3() => await SavePbSv3Internal(3);
+
+    private async Task<SavePbResponse> SavePbSv3Internal(int gameVersion)
+    {
+        var request = Request as SavePbRequest;
+        if (request is null) return new SavePbResponse { Status = "1" };
+
+        // sv3 uses dataid element for refid
+        var refid = !string.IsNullOrEmpty(request.RefId) ? request.RefId : request.DataId;
+        if (string.IsNullOrEmpty(refid)) return new SavePbResponse { Status = "1" };
+
+        using var db = new StellaKFCContext();
+
+        // Upsert policy break exp (asphyxia savePb)
+        var pb = await db.SvPolicyBreaks.SingleOrDefaultAsync(p =>
+            p.RefId == refid && p.Version == gameVersion && p.Id1 == request.Id);
+        if (pb is null)
+        {
+            pb = new SvPolicyBreak { RefId = refid, Version = gameVersion, Id1 = request.Id, Exp = request.Exp };
+            db.SvPolicyBreaks.Add(pb);
+        }
+        else
+        {
+            pb.Exp = request.Exp;
+            db.SvPolicyBreaks.Update(pb);
+        }
+        await db.SaveChangesAsync();
+
+        // Reward when exp >= 24000 (asphyxia savePb L1338-1345)
+        var pbData = await db.SvPolicyBreakDatas.FirstOrDefaultAsync(p => p.Version == gameVersion && p.Pbid == request.Id);
+        if (pbData is not null && pb.Exp >= 24000)
+        {
+            var profile = await db.SvProfiles.SingleOrDefaultAsync(x => x.RefId == refid && x.Version == gameVersion);
+            if (profile is not null)
+            {
+                var item = await db.SvItems.SingleOrDefaultAsync(x =>
+                    x.Profile == profile.Id && x.Type == (byte)pbData.RwrdType && x.ItemId == (uint)pbData.RwrdId && x.Version == gameVersion);
+                if (item is null)
+                    db.SvItems.Add(new SvItem { Profile = profile.Id, Type = (byte)pbData.RwrdType, ItemId = (uint)pbData.RwrdId, Param = (uint)pbData.RwrdParam, Version = gameVersion });
+                else
+                    item.Param = (uint)pbData.RwrdParam;
+                await db.SaveChangesAsync();
+            }
+        }
+
+        return new SavePbResponse { Exp = request.Exp, Result = true };
+    }
 }

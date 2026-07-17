@@ -7,7 +7,10 @@ namespace StellaKFCPlugin.Models
     public class SavePbRequest : IStellaEAmuseRequest
     {
         [XmlElement(ElementName = "refid")]
-        public string RefId { get; set; }
+        public string RefId { get; set; } = string.Empty;
+
+        [XmlElement(ElementName = "dataid")]
+        public string DataId { get; set; } = string.Empty;
 
         [XmlElement(ElementName = "id")]
         public int Id { get; set; }
