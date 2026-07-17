@@ -137,6 +137,12 @@ namespace Stella.Services
                         // Pre-process XML to convert space-separated numeric arrays to individual elements
                         PreprocessXmlForArrays(requestData);
 
+                        // Normalize the root element name so XmlSerializer can match it.
+                        // Older games send <game_3>, <game_2> etc. but request models
+                        // have [XmlRoot(ElementName = "game")]. Rename the root to
+                        // match the expected element name.
+                        NormalizeRootElementName(requestData, requestType);
+
                         var serializer = GetSerializer(requestType);
                         using (var reader = requestData.Root.FirstNode.CreateReader())
                         {
@@ -205,6 +211,26 @@ namespace Stella.Services
         /// For example: &lt;judge __count="7"&gt;0 0 0 8 0 0 0&lt;/judge&gt;
         /// Becomes: &lt;judge&gt;0&lt;/judge&gt;&lt;judge&gt;0&lt;/judge&gt;...
         /// </summary>
+        /// <summary>
+        /// Renames the XML root element to match the request type's [XmlRoot]
+        /// ElementName. Older games send &lt;game_3&gt;, &lt;game_2&gt; etc. but
+        /// request models declare [XmlRoot(ElementName = "game")]. Without this,
+        /// XmlSerializer throws "was not expected" for non-matching root names.
+        /// </summary>
+        private void NormalizeRootElementName(XDocument doc, Type requestType)
+        {
+            if (doc?.Root == null) return;
+
+            var xmlRootAttr = requestType.GetCustomAttribute<XmlRootAttribute>();
+            if (xmlRootAttr?.ElementName == null) return;
+
+            var expectedName = xmlRootAttr.ElementName;
+            if (doc.Root.Name.LocalName != expectedName)
+            {
+                doc.Root.Name = expectedName;
+            }
+        }
+
         private void PreprocessXmlForArrays(XDocument doc)
         {
             if (doc?.Root == null)
