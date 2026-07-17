@@ -190,6 +190,33 @@ public List<int> Gip => GipRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries)
 
 **For response models** that need `__count`/`__type` on arrays (e.g. `over_radar`, `param`), use `List<int>` so `XDocumentTypeExtensions` emits the correct attributes. The response side is handled by the serializer, not `XmlSerializer` directly.
 
+### Request deserialization — root element name normalization
+
+asphyxia parses the request XML into a generic JSON object and reads the `call` element's child name as the module name (e.g. `game_3`, `game_2`, `game`). It does **not** care about the XML root element name — the data is accessed by path (`get(body.data, 'call.${body.module}')`).
+
+Stella uses `XmlSerializer` which **does** care about the root element name. Request models declare `[XmlRoot(ElementName = "game")]`, but older games (e.g. GRAVITY WARS sv3) send `<game_3>` as the root element. This causes `XmlSerializer` to throw `"<game_3 xmlns=''> was not expected"`.
+
+**Solution**: `PluginService.NormalizeRootElementName()` renames the XML root element to match the request type's `[XmlRoot]` ElementName before deserialization. This is called automatically for every request — no action needed when adding new handlers.
+
+### Request routing — legacy `module`+`method` vs modern `f` parameter
+
+Older game versions (e.g. GRAVITY WARS sv3) send routing via query params `module=services&method=get` instead of the modern `f=services.get`. Stella's `Program.cs` checks `f` first, then falls back to `module`+`method`. Both route groups (`/eamuse` and `/core`) support this.
+
+### EAMUSE request detection — User-Agent variants
+
+The middleware (`EAmuseXrpcInputMiddleware`) checks the `User-Agent` header to identify e-amusement requests. Modern games send `EAMUSE.XRPC/1.0`, but older games (e.g. GRAVITY WARS sv3) send `EAMUSE.Httpac/1.0`. Both are accepted. When adding support for other game versions, verify the User-Agent and add it to `IsEAmuseRequest` if different.
+
+### Multi-version route registration
+
+asphyxia's `MultiRoute` registers each method under multiple prefixes: `game.<method>`, `game_2.<method>`, `game.sv6_<method>`, `game.sv7_<method>`. The game client determines which prefix to use based on its version:
+
+- **sv6 (EXCEED GEAR)**: `game.sv6_common`
+- **sv7 (NABLA)**: `game.sv7_common`
+- **sv3 (GRAVITY WARS)**: `game_3.common` (note: asphyxia does NOT register `game_3` via `MultiRoute`, but the game sends it anyway)
+- **sv1 (BOOTH) / sv2 (infinite infection)**: `game.common` or `game_2.common` (bare routes)
+
+Stella must register **all** route prefixes that the game might send. For KFC this means: `game.sv6_*`, `game.sv7_*`, `game.*` (bare), and `game_3.*` for every handler method. Each bare/`game_3` variant calls the same internal method with the version auto-detected from the model string via `KfcVersion.GetVersion(Model)`.
+
 ## Database & Configuration
 
 - MariaDB/MySQL via Pomelo. Each plugin registers its own `DbContext` and connection string from its JSON config or the `STELLA_*_DB` env var.
