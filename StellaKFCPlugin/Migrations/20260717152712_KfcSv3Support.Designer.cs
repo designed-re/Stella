@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using StellaKFCPlugin.EF;
 
@@ -11,9 +12,11 @@ using StellaKFCPlugin.EF;
 namespace StellaKFCPlugin.Migrations
 {
     [DbContext(typeof(StellaKFCContext))]
-    partial class StellaKFCContextModelSnapshot : ModelSnapshot
+    [Migration("20260717152712_KfcSv3Support")]
+    partial class KfcSv3Support
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

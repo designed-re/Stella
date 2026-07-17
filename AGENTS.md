@@ -234,3 +234,30 @@ Commit messages are short, lowercase, imperative summaries (e.g. `update readme`
 
 - Open merge requests against `main` with a description referencing the affected handler/plugin or game code.
 - Verify `dotnet build Stella.slnx` succeeds and your plugin appears in `Stella/bin/Debug/net10.0/plugins/` before review.
+## Games
+
+### SOUND VOLTEX (KFC)
+
+KFC는 SOUND VOLTEX 시리즈의 게임 코드입니다. 각 버전은 내부적으로 다음과 같이 구분됩니다:
+
+| 버전 | 코드 | 이름 | 비고 |
+|------|------|------|------|
+| 1 | sv1 | BOOTH | |
+| 2 | sv2 | infinite infection | |
+| 3 | sv3 | GRAVITY WARS | `game_3.*` 라우트 사용 |
+| 4 | sv4 | HEAVENLY HAVEN | |
+| 5 | sv5 | VIVID WAVE | |
+| 6 | sv6 | EXCEED GEAR | `game.sv6_*` 라우트 사용 |
+| 7 | sv7 | NABLA | `game.sv7_*` 라우트 사용 |
+
+**버전 감지**: `KfcVersion.GetVersion(Model)`이 e-amusement 모델 문자열의 datecode를 기반으로 버전을 반환합니다.
+
+**라우트 접두사**:
+- sv6: `game.sv6_*` (예: `game.sv6_common`)
+- sv7: `game.sv7_*` (예: `game.sv7_common`)
+- sv3: `game_3.*` (예: `game_3.common`)
+- sv1/sv2: `game.*` 또는 `game_2.*` (bare routes)
+
+**구현 참고**:
+- sv6/sv7: Stella의 기존 구현 (`Handlers/LoadHandler.cs`, `Handlers/SaveHandler.cs` 등)
+- sv3: `https://github.com/22vv0/asphyxia_plugins/tree/kfc` 브랜치의 `game_3.*` 관련 코드만 참고 (sv6/sv7 코드와 충돌 방지)

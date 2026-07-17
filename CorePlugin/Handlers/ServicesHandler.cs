@@ -1,7 +1,7 @@
 using CorePlugin.Models;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Stella.Abstractions.Plugins;
+using Stella.Services;
 
 namespace CorePlugin.Handlers
 {
@@ -22,138 +22,63 @@ namespace CorePlugin.Handlers
         public async Task<GetServicesResponse> GetServices()
         {
             var url = BaseUrl;
+
+            // Core services that the game expects. These are listed at the
+            // service level (not method level) because that's what e-amusement
+            // uses in the services.get response. Some have no backing handler
+            // (e.g. numbering, lobby) but must still be advertised.
+            var items = new List<ServiceItem>
+            {
+                new ServiceItem { Name = "ntp", Url = "ntp://pool.ntp.org/" },
+                new ServiceItem { Name = "keepalive", Url = KeepaliveUrl },
+                new ServiceItem { Name = "cardmng", Url = url },
+                new ServiceItem { Name = "facility", Url = url },
+                new ServiceItem { Name = "message", Url = url },
+                new ServiceItem { Name = "numbering", Url = url },
+                new ServiceItem { Name = "package", Url = url },
+                new ServiceItem { Name = "pcbevent", Url = url },
+                new ServiceItem { Name = "pcbtracker", Url = url },
+                new ServiceItem { Name = "pkglist", Url = url },
+                new ServiceItem { Name = "posevent", Url = url },
+                new ServiceItem { Name = "userdata", Url = url },
+                new ServiceItem { Name = "userid", Url = url },
+                new ServiceItem { Name = "eacoin", Url = url },
+                new ServiceItem { Name = "dlstatus", Url = url },
+                new ServiceItem { Name = "netlog", Url = url },
+                new ServiceItem { Name = "sidmgr", Url = url },
+                new ServiceItem { Name = "globby", Url = url },
+                new ServiceItem { Name = "local", Url = url },
+                new ServiceItem { Name = "local2", Url = url },
+                new ServiceItem { Name = "lobby", Url = url },
+                new ServiceItem { Name = "lobby2", Url = url },
+            };
+
+            // Dynamically discover game services from loaded plugins.
+            // PluginService stores keys as "service:module" (e.g. "game:sv6_common").
+            // Extract unique service-level names (e.g. "game", "game_3") —
+            // the e-amusement protocol only sends service names, not methods.
+            var pluginService = HttpContext.RequestServices.GetRequiredService<PluginService>();
+            var gameServiceNames = new HashSet<string>();
+            foreach (var key in pluginService.RegisteredHandlers)
+            {
+                if (key.StartsWith("game"))
+                {
+                    var serviceName = key.Split(':')[0];
+                    gameServiceNames.Add(serviceName);
+                }
+            }
+            foreach (var name in gameServiceNames)
+            {
+                items.Add(new ServiceItem { Name = name, Url = url });
+            }
+
             return new GetServicesResponse
             {
                 Expire = 600,
                 Method = "get",
                 Mode = "operation",
                 Status = 0,
-                Items = new List<ServiceItem>
-                {
-                    new ServiceItem { Name = "ntp", Url = "ntp://pool.ntp.org/" },
-                    new ServiceItem { Name = "keepalive", Url = KeepaliveUrl },
-                    new ServiceItem { Name = "cardmng", Url = url },
-                    new ServiceItem { Name = "facility", Url = url },
-                    new ServiceItem { Name = "message", Url = url },
-                    new ServiceItem { Name = "numbering", Url = url },
-                    new ServiceItem { Name = "package", Url = url },
-                    new ServiceItem { Name = "pcbevent", Url = url },
-                    new ServiceItem { Name = "pcbtracker", Url = url },
-                    new ServiceItem { Name = "pkglist", Url = url },
-                    new ServiceItem { Name = "posevent", Url = url },
-                    new ServiceItem { Name = "userdata", Url = url },
-                    new ServiceItem { Name = "userid", Url = url },
-                    new ServiceItem { Name = "eacoin", Url = url },
-                    new ServiceItem { Name = "dlstatus", Url = url },
-                    new ServiceItem { Name = "netlog", Url = url },
-                    new ServiceItem { Name = "sidmgr", Url = url },
-                    new ServiceItem { Name = "globby", Url = url },
-                    new ServiceItem { Name = "local", Url = url },
-                    new ServiceItem { Name = "local2", Url = url },
-                    new ServiceItem { Name = "lobby", Url = url },
-                    new ServiceItem { Name = "lobby2", Url = url },
-                    // EXCEED GEAR (sv6)
-                    new ServiceItem { Name = "game.sv6_common", Url = url },
-                    new ServiceItem { Name = "game.sv6_new", Url = url },
-                    new ServiceItem { Name = "game.sv6_load", Url = url },
-                    new ServiceItem { Name = "game.sv6_load_m", Url = url },
-                    new ServiceItem { Name = "game.sv6_save", Url = url },
-                    new ServiceItem { Name = "game.sv6_save_m", Url = url },
-                    new ServiceItem { Name = "game.sv6_save_c", Url = url },
-                    new ServiceItem { Name = "game.sv6_save_pb", Url = url },
-                    new ServiceItem { Name = "game.sv6_save_valgene", Url = url },
-                    new ServiceItem { Name = "game.sv6_frozen", Url = url },
-                    new ServiceItem { Name = "game.sv6_buy", Url = url },
-                    new ServiceItem { Name = "game.sv6_print", Url = url },
-                    new ServiceItem { Name = "game.sv6_hiscore", Url = url },
-                    new ServiceItem { Name = "game.sv6_load_r", Url = url },
-                    new ServiceItem { Name = "game.sv6_lounge", Url = url },
-                    new ServiceItem { Name = "game.sv6_shop", Url = url },
-                    new ServiceItem { Name = "game.sv6_save_e", Url = url },
-                    new ServiceItem { Name = "game.sv6_save_mega", Url = url },
-                    new ServiceItem { Name = "game.sv6_play_e", Url = url },
-                    new ServiceItem { Name = "game.sv6_play_s", Url = url },
-                    new ServiceItem { Name = "game.sv6_entry_s", Url = url },
-                    new ServiceItem { Name = "game.sv6_entry_e", Url = url },
-                    new ServiceItem { Name = "game.sv6_exception", Url = url },
-                    new ServiceItem { Name = "game.sv6_log", Url = url },
-                    // NABLA (sv7)
-                    new ServiceItem { Name = "game.sv7_common", Url = url },
-                    new ServiceItem { Name = "game.sv7_new", Url = url },
-                    new ServiceItem { Name = "game.sv7_load", Url = url },
-                    new ServiceItem { Name = "game.sv7_load_m", Url = url },
-                    new ServiceItem { Name = "game.sv7_save", Url = url },
-                    new ServiceItem { Name = "game.sv7_save_m", Url = url },
-                    new ServiceItem { Name = "game.sv7_save_c", Url = url },
-                    new ServiceItem { Name = "game.sv7_save_pb", Url = url },
-                    new ServiceItem { Name = "game.sv7_save_valgene", Url = url },
-                    new ServiceItem { Name = "game.sv7_frozen", Url = url },
-                    new ServiceItem { Name = "game.sv7_buy", Url = url },
-                    new ServiceItem { Name = "game.sv7_print", Url = url },
-                    new ServiceItem { Name = "game.sv7_hiscore", Url = url },
-                    new ServiceItem { Name = "game.sv7_load_r", Url = url },
-                    new ServiceItem { Name = "game.sv7_lounge", Url = url },
-                    new ServiceItem { Name = "game.sv7_shop", Url = url },
-                    new ServiceItem { Name = "game.sv7_save_e", Url = url },
-                    new ServiceItem { Name = "game.sv7_save_mega", Url = url },
-                    new ServiceItem { Name = "game.sv7_play_e", Url = url },
-                    new ServiceItem { Name = "game.sv7_play_s", Url = url },
-                    new ServiceItem { Name = "game.sv7_entry_s", Url = url },
-                    new ServiceItem { Name = "game.sv7_entry_e", Url = url },
-                    new ServiceItem { Name = "game.sv7_exception", Url = url },
-                    new ServiceItem { Name = "game.sv7_log", Url = url },
-                    // Bare game.* routes (used by GRAVITY WARS sv3 and earlier
-                    // — asphyxia registers these via MultiRoute alongside sv6/sv7).
-                    new ServiceItem { Name = "game.common", Url = url },
-                    new ServiceItem { Name = "game.new", Url = url },
-                    new ServiceItem { Name = "game.load", Url = url },
-                    new ServiceItem { Name = "game.load_m", Url = url },
-                    new ServiceItem { Name = "game.save", Url = url },
-                    new ServiceItem { Name = "game.save_m", Url = url },
-                    new ServiceItem { Name = "game.save_c", Url = url },
-                    new ServiceItem { Name = "game.save_pb", Url = url },
-                    new ServiceItem { Name = "game.save_valgene", Url = url },
-                    new ServiceItem { Name = "game.frozen", Url = url },
-                    new ServiceItem { Name = "game.buy", Url = url },
-                    new ServiceItem { Name = "game.print", Url = url },
-                    new ServiceItem { Name = "game.hiscore", Url = url },
-                    new ServiceItem { Name = "game.load_r", Url = url },
-                    new ServiceItem { Name = "game.lounge", Url = url },
-                    new ServiceItem { Name = "game.shop", Url = url },
-                    new ServiceItem { Name = "game.save_e", Url = url },
-                    new ServiceItem { Name = "game.save_mega", Url = url },
-                    new ServiceItem { Name = "game.play_e", Url = url },
-                    new ServiceItem { Name = "game.play_s", Url = url },
-                    new ServiceItem { Name = "game.entry_s", Url = url },
-                    new ServiceItem { Name = "game.entry_e", Url = url },
-                    new ServiceItem { Name = "game.exception", Url = url },
-                    new ServiceItem { Name = "game.log", Url = url },
-                    // game_3.* routes (GRAVITY WARS sv3 uses game_3 prefix)
-                    new ServiceItem { Name = "game_3.common", Url = url },
-                    new ServiceItem { Name = "game_3.new", Url = url },
-                    new ServiceItem { Name = "game_3.load", Url = url },
-                    new ServiceItem { Name = "game_3.load_m", Url = url },
-                    new ServiceItem { Name = "game_3.save", Url = url },
-                    new ServiceItem { Name = "game_3.save_m", Url = url },
-                    new ServiceItem { Name = "game_3.save_c", Url = url },
-                    new ServiceItem { Name = "game_3.save_pb", Url = url },
-                    new ServiceItem { Name = "game_3.save_valgene", Url = url },
-                    new ServiceItem { Name = "game_3.frozen", Url = url },
-                    new ServiceItem { Name = "game_3.buy", Url = url },
-                    new ServiceItem { Name = "game_3.print", Url = url },
-                    new ServiceItem { Name = "game_3.hiscore", Url = url },
-                    new ServiceItem { Name = "game_3.load_r", Url = url },
-                    new ServiceItem { Name = "game_3.lounge", Url = url },
-                    new ServiceItem { Name = "game_3.shop", Url = url },
-                    new ServiceItem { Name = "game_3.save_e", Url = url },
-                    new ServiceItem { Name = "game_3.save_mega", Url = url },
-                    new ServiceItem { Name = "game_3.play_e", Url = url },
-                    new ServiceItem { Name = "game_3.play_s", Url = url },
-                    new ServiceItem { Name = "game_3.entry_s", Url = url },
-                    new ServiceItem { Name = "game_3.entry_e", Url = url },
-                    new ServiceItem { Name = "game_3.exception", Url = url },
-                    new ServiceItem { Name = "game_3.log", Url = url },
-                }
+                Items = items,
             };
         }
     }

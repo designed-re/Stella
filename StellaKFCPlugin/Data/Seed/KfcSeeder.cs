@@ -39,6 +39,16 @@ public static class KfcSeeder
         var ii = root;
         var booth = root;
 
+        // Load GRAVITY WARS (sv3) data from separate file
+        var gwPath = Path.Combine(Directory.GetCurrentDirectory(), "Data", "Seed", "gw_data.json");
+        if (!File.Exists(gwPath))
+            gwPath = Path.Combine(AppContext.BaseDirectory, "Data", "Seed", "gw_data.json");
+        JObject? gw = null;
+        if (File.Exists(gwPath))
+            gw = JObject.Parse(File.ReadAllText(gwPath));
+        else
+            Console.WriteLine("[KfcSeeder] gw_data.json not found; skipping sv3 seed.");
+
         SeedEvents(db, 6, exg?["EVENT6"] as JArray);
         SeedEvents(db, 7, nbl?["EVENT7"] as JArray);
 
@@ -80,6 +90,15 @@ public static class KfcSeeder
         // Unlock events (rich nested data) — serialize per-event as JSON.
         SeedUnlockEvents(db, 6, exg?["UNLOCK_EVENTS6"] as JObject);
         SeedUnlockEvents(db, 7, nbl?["UNLOCK_EVENTS7"] as JObject);
+
+        // GRAVITY WARS (sv3) data
+        if (gw != null)
+        {
+            SeedEvents(db, 3, gw["EVENT3"] as JArray);
+            SeedCourses(db, 3, gw["COURSES3"] as JArray);
+            SeedPolicyBreakData(db, 3, gw["POLICY_BREAK3"] as JArray);
+            SeedExtends(db, 3, gw["EXTENDS3"] as JArray);
+        }
 
         db.SaveChanges();
         Console.WriteLine("[KfcSeeder] Seed complete.");
@@ -419,6 +438,11 @@ public static class KfcSeeder
                 RwrdParam = rwrd["param"]!.Value<int>(),
                 StartDate = pb["start"]?.Value<long>() ?? 0,
                 EndDate = pb["end"]?.Value<long>() ?? 0,
+                TitleJ = pb["titleJ"]?.Value<string>() ?? "",
+                TitleE = pb["titleE"]?.Value<string>() ?? "",
+                TargetId = pb["tgt"]?.Value<int>() ?? 0,
+                RwrdPoint = rwrd["point"]?.Value<int>() ?? 0,
+                RwrdMusicId = rwrd["id"]?.Value<int>() ?? 0,
             });
         }
     }

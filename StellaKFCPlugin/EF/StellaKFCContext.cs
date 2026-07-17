@@ -36,6 +36,7 @@ namespace StellaKFCPlugin.EF
         public virtual DbSet<SvSkill> SvSkills { get; set; }
 
         public virtual DbSet<SvWeeklyMusicScore> SvWeeklyMusicScores { get; set; }
+        public virtual DbSet<Sv3Story> Sv3Stories { get; set; }
 
         public virtual DbSet<SvPolicyBreak> SvPolicyBreaks { get; set; }
 
@@ -791,6 +792,24 @@ namespace StellaKFCPlugin.EF
                 entity.Property(e => e.HiscoreCount).HasColumnType("int(11)").HasColumnName("hiscore_count").HasDefaultValue(0);
             });
 
+
+            builder.Entity<Sv3Story>(entity =>
+            {
+                entity.HasKey(e => e.Id).HasName("PRIMARY");
+
+                entity.ToTable("sv3_story", tb => tb.HasComment("GRAVITY WARS (sv3) story progression data"));
+
+                entity.HasIndex(e => new { e.RefId, e.Version, e.StoryId }, "idx_refid_version_storyid");
+
+                entity.Property(e => e.Id).HasColumnType("int(11)").HasColumnName("id");
+                entity.Property(e => e.RefId).HasMaxLength(16).IsFixedLength().HasColumnName("ref_id");
+                entity.Property(e => e.Version).HasColumnType("int(11)").HasColumnName("version");
+                entity.Property(e => e.StoryId).HasColumnType("int(11)").HasColumnName("story_id");
+                entity.Property(e => e.ProgressId).HasColumnType("int(11)").HasColumnName("progress_id");
+                entity.Property(e => e.ProgressParam).HasColumnType("int(11)").HasColumnName("progress_param");
+                entity.Property(e => e.ClearCnt).HasColumnType("int(11)").HasColumnName("clear_cnt");
+                entity.Property(e => e.RouteFlg).HasColumnType("int(11)").HasColumnName("route_flg");
+            });
             builder.Entity<SvPolicyBreak>(entity =>
             {
                 entity.HasKey(e => e.Id).HasName("PRIMARY");
@@ -1067,6 +1086,11 @@ namespace StellaKFCPlugin.EF
                 entity.Property(e => e.RwrdParam).HasColumnType("int(11)").HasColumnName("rwrd_param");
                 entity.Property(e => e.StartDate).HasColumnType("bigint(20)").HasColumnName("start_date");
                 entity.Property(e => e.EndDate).HasColumnType("bigint(20)").HasColumnName("end_date");
+                entity.Property(e => e.TitleJ).HasMaxLength(255).HasColumnName("title_j").HasDefaultValue("");
+                entity.Property(e => e.TitleE).HasMaxLength(255).HasColumnName("title_e").HasDefaultValue("");
+                entity.Property(e => e.TargetId).HasColumnType("int(11)").HasColumnName("target_id").HasDefaultValue(0);
+                entity.Property(e => e.RwrdPoint).HasColumnType("int(11)").HasColumnName("rwrd_point").HasDefaultValue(0);
+                entity.Property(e => e.RwrdMusicId).HasColumnType("int(11)").HasColumnName("rwrd_music_id").HasDefaultValue(0);
             });
 
             builder.Entity<StaticData.SvWeeklyMusic>(entity =>

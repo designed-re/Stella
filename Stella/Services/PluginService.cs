@@ -15,6 +15,13 @@ namespace Stella.Services
 
         public IReadOnlyList<IStellaPlugin> LoadedPlugins => _loadedPlugins.AsReadOnly();
 
+        /// <summary>
+        /// Returns all registered handler keys as "service.method" strings.
+        /// Used by <c>services.get</c> to dynamically build the endpoint list
+        /// instead of hardcoding service entries.
+        /// </summary>
+        public IReadOnlyCollection<string> RegisteredHandlers => _handlerCache.Keys;
+
     public async Task LoadPluginsAsync()
     {
         var path = Path.Combine(Directory.GetCurrentDirectory(), "plugins");
@@ -225,6 +232,18 @@ namespace Stella.Services
             if (xmlRootAttr?.ElementName == null) return;
 
             var expectedName = xmlRootAttr.ElementName;
+
+            // The e-amusement XML wraps data in a <call> element:
+            //   <call srcid="..."><game_3 method="common" ...>...</game_3></call>
+            // XmlSerializer reads from Root.FirstNode, so normalize that child
+            // element rather than the <call> root itself.
+            if (doc.Root.FirstNode is XElement firstChild && firstChild.Name.LocalName != expectedName)
+            {
+                firstChild.Name = expectedName;
+            }
+
+            // Also normalize the root in case the document has no <call>
+            // wrapper and the root IS the data element.
             if (doc.Root.Name.LocalName != expectedName)
             {
                 doc.Root.Name = expectedName;

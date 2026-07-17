@@ -29,8 +29,6 @@ namespace StellaKFCPlugin.Handlers
 
         [StellaHandler("game", "save_m", typeof(SaveMRequest))]
         public async Task<SaveMResponse> SaveMusicBare() => await SaveMusicInternal(Math.Abs(KfcVersion.GetVersion(Model)));
-        [StellaHandler("game_3", "save_m", typeof(SaveMRequest))]
-        public async Task<SaveMResponse> SaveMusicBareGame3() => await SaveMusicInternal(Math.Abs(KfcVersion.GetVersion(Model)));
 
         [StellaHandler("game", "sv6_save", typeof(SaveRequest))]
         public async Task<SaveResponse> Save() => await SaveInternal(6);
@@ -40,8 +38,6 @@ namespace StellaKFCPlugin.Handlers
 
         [StellaHandler("game", "save", typeof(SaveRequest))]
         public async Task<SaveResponse> SaveBare() => await SaveInternal(Math.Abs(KfcVersion.GetVersion(Model)));
-        [StellaHandler("game_3", "save", typeof(SaveRequest))]
-        public async Task<SaveResponse> SaveBareGame3() => await SaveInternal(Math.Abs(KfcVersion.GetVersion(Model)));
 
         [StellaHandler("game", "sv6_save_e", typeof(SaveRequest))]
         public async Task<SaveResponse> SaveE() => new();
@@ -51,8 +47,6 @@ namespace StellaKFCPlugin.Handlers
 
         [StellaHandler("game", "save_e", typeof(SaveRequest))]
         public async Task<SaveResponse> SaveEBare() => new();
-        [StellaHandler("game_3", "save_e", typeof(SaveRequest))]
-        public async Task<SaveResponse> SaveEBareGame3() => new();
 
         [StellaHandler("game", "sv6_save_c", typeof(SaveCourseRequest))]
         public async Task<SaveResponse> SaveCourse() => await SaveCourseInternal(6);
@@ -62,8 +56,6 @@ namespace StellaKFCPlugin.Handlers
 
         [StellaHandler("game", "save_c", typeof(SaveCourseRequest))]
         public async Task<SaveResponse> SaveCourseBare() => await SaveCourseInternal(Math.Abs(KfcVersion.GetVersion(Model)));
-        [StellaHandler("game_3", "save_c", typeof(SaveCourseRequest))]
-        public async Task<SaveResponse> SaveCourseBareGame3() => await SaveCourseInternal(Math.Abs(KfcVersion.GetVersion(Model)));
 
         [StellaHandler("game", "sv6_save_valgene", typeof(SaveValgeneRequest))]
         public async Task<SaveValgeneResponse> SaveValgene() => await SaveValgeneInternal(6);
@@ -73,8 +65,6 @@ namespace StellaKFCPlugin.Handlers
 
         [StellaHandler("game", "save_valgene", typeof(SaveValgeneRequest))]
         public async Task<SaveValgeneResponse> SaveValgeneBare() => await SaveValgeneInternal(Math.Abs(KfcVersion.GetVersion(Model)));
-        [StellaHandler("game_3", "save_valgene", typeof(SaveValgeneRequest))]
-        public async Task<SaveValgeneResponse> SaveValgeneBareGame3() => await SaveValgeneInternal(Math.Abs(KfcVersion.GetVersion(Model)));
 
         [StellaHandler("game", "sv6_save_pb", typeof(SavePbRequest))]
         public async Task<SavePbResponse> SavePb() => await SavePbInternal(6);
@@ -84,10 +74,6 @@ namespace StellaKFCPlugin.Handlers
 
         [StellaHandler("game", "save_pb", typeof(SavePbRequest))]
         public async Task<SavePbResponse> SavePbBare() => await SavePbInternal(Math.Abs(KfcVersion.GetVersion(Model)));
-
-        [StellaHandler("game_3", "save_pb", typeof(SavePbRequest))]
-        public async Task<SavePbResponse> SavePbBareGame3() => await SavePbInternal(Math.Abs(KfcVersion.GetVersion(Model)));
-
 
         private async Task<SaveMResponse> SaveMusicInternal(int gameVersion)
         {

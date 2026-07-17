@@ -41,10 +41,15 @@ namespace StellaKFCPlugin
         [ConfigurationKeyName("arena_no_endtime")]
         public bool ArenaNoEndtime { get; set; } = true;
 
-        // TODO: Add KFC-specific configuration properties here
-        // Example:
-        // [ConfigurationKeyName("game_mode")]
-        // public string GameMode { get; set; }
+        // GRAVITY WARS (sv3) options
+        [ConfigurationKeyName("gw_mission")]
+        public bool GwMission { get; set; }
+
+        [ConfigurationKeyName("gw_mission_skipmatch")]
+        public bool GwMissionSkipmatch { get; set; }
+
+        [ConfigurationKeyName("gw_gene")]
+        public bool GwGene { get; set; } = true;
     }
 }
 

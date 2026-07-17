@@ -61,22 +61,32 @@ export STELLA_KFC_DB="$KFC_DB"
 export STELLA_CORE_DB="$CORE_DB"
 
 # ---------------------------------------------------------------------------
-# Wait for the database to accept TCP connections. The compose healthcheck
-# usually handles this, but be defensive.
+# Wait for the database to accept TCP connections.
+#
+# docker-compose already waits for the MariaDB healthcheck (service_healthy),
+# so this is only a safety net for standalone usage. Uses a fast retry loop
+# with a short timeout to avoid hanging.
 # ---------------------------------------------------------------------------
 DB_HOST=$(echo "$KFC_DB" | sed -n 's/.*Server=\([^;]*\).*/\1/p')
 DB_PORT=$(echo "$KFC_DB" | sed -n 's/.*Port=\([^;]*\).*/\1/p')
 DB_PORT="${DB_PORT:-3306}"
 echo "[entrypoint] waiting for db at ${DB_HOST}:${DB_PORT} ..."
+
 i=0
-while [ $i -lt 30 ]; do
-  if (echo > /dev/tcp/${DB_HOST}/${DB_PORT}) 2>/dev/null; then
+while [ $i -lt 20 ]; do
+  # Use timeout to avoid hanging on unreachable hosts.
+  if timeout 1 sh -c "echo > /dev/tcp/${DB_HOST}/${DB_PORT}" 2>/dev/null; then
     echo "[entrypoint] db is reachable."
     break
   fi
   i=$((i + 1))
-  sleep 1
+  # Fast retry: 0.5s intervals, 20 attempts = 10s max (vs old 30s).
+  sleep 0.5
 done
+
+if [ $i -ge 20 ]; then
+  echo "[entrypoint] warning: db not reachable after 10s, starting anyway..."
+fi
 
 # ---------------------------------------------------------------------------
 # Start the Stella server. OnAppInitialize runs:
