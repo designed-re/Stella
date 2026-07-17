@@ -344,6 +344,14 @@ namespace StellaKFCPlugin.EF
                     .HasComment("equals with block_no")
                     .HasColumnType("int(11)")
                     .HasColumnName("pcb");
+                entity.Property(e => e.Packets)
+                    .HasColumnType("int(10) unsigned")
+                    .HasColumnName("packets")
+                    .HasDefaultValue(10000);
+                entity.Property(e => e.Blocks)
+                    .HasColumnType("int(10) unsigned")
+                    .HasColumnName("blocks")
+                    .HasDefaultValue(10000);
                 entity.Property(e => e.PlayChain)
                     .HasColumnType("int(10) unsigned")
                     .HasColumnName("play_chain");

@@ -24,6 +24,9 @@ namespace StellaKFCPlugin.Handlers
         [StellaHandler("game", "sv7_new", typeof(NewRequest))]
         public async Task<NewResponse> NewNabla() => await NewInternal(7);
 
+        [StellaHandler("game", "new", typeof(NewRequest))]
+        public async Task<NewResponse> NewBare() => await NewInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
         private async Task<NewResponse> NewInternal(int gameVersion)
         {
             var request = Request as NewRequest;
@@ -62,6 +65,8 @@ namespace StellaKFCPlugin.Handlers
                 Datecode = dVersion,
                 PluginVer = 1,
                 DbVer = 1,
+                Packets = 10000,
+                Blocks = 10000,
             };
             db.SvProfiles.Add(profile);
             await db.SaveChangesAsync();

@@ -15,5 +15,8 @@ namespace StellaKFCPlugin.Handlers
 
         [StellaHandler("game", "sv7_frozen", typeof(FrozenRequest))]
         public async Task<FrozenResponse> FrozenNabla() => new();
+
+        [StellaHandler("game", "frozen", typeof(FrozenRequest))]
+        public async Task<FrozenResponse> FrozenBare() => new();
     }
 }

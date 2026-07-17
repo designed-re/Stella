@@ -47,11 +47,17 @@ namespace StellaKFCPlugin.Handlers
         [StellaHandler("game", "sv7_lounge", typeof(LoungeRequest))]
         public async Task<LoungeResponse> LoungeNabla() => await LoungeInternal(7);
 
+        [StellaHandler("game", "lounge", typeof(LoungeRequest))]
+        public async Task<LoungeResponse> LoungeBare() => await LoungeInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
         [StellaHandler("game", "sv6_entry_s", typeof(EntrySRequest))]
         public async Task<EntrySResponse> EntryS() => await EntrySInternal(6);
 
         [StellaHandler("game", "sv7_entry_s", typeof(EntrySRequest))]
         public async Task<EntrySResponse> EntrySNabla() => await EntrySInternal(7);
+
+        [StellaHandler("game", "entry_s", typeof(EntrySRequest))]
+        public async Task<EntrySResponse> EntrySBare() => await EntrySInternal(Math.Abs(KfcVersion.GetVersion(Model)));
 
         private Task<LoungeResponse> LoungeInternal(int gameVersion)
         {

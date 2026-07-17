@@ -1,6 +1,7 @@
 ﻿using Stella.Abstractions;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Xml.Serialization;
 using StellaKFCPlugin.Classes;
@@ -47,6 +48,9 @@ namespace StellaKFCPlugin.Models
 
         [XmlElement(ElementName = "variant_gate")]
         public SaveVariantGate VariantGate { get; set; } = new();
+
+        [XmlElement(ElementName = "arena")]
+        public List<SaveArena> ArenaList { get; set; } = new();
 
         [XmlElement(ElementName = "p_start")]
         public ulong PStart { get; set; }
@@ -123,14 +127,24 @@ namespace StellaKFCPlugin.Models
         [XmlElement(ElementName = "crsid")]
         public short CourseId { get; set; }
 
+        [XmlElement(ElementName = "st")]
+        public short SkillType { get; set; }
+
+        [XmlElement(ElementName = "kac_id")]
+        public string KacId { get; set; } = string.Empty;
+
         [XmlElement(ElementName = "sc")]
         public int Score { get; set; }
+
+        [XmlElement(ElementName = "ex")]
+        public int Exscore { get; set; }
 
         [XmlElement(ElementName = "ct")]
         public short Clear { get; set; }
 
         [XmlElement(ElementName = "gr")]
         public short Grade { get; set; }
+
         [XmlElement(ElementName = "ar")]
         public short Rate { get; set; }
     }
@@ -144,6 +158,41 @@ namespace StellaKFCPlugin.Models
 
         [XmlElement(ElementName = "earned_element")]
         public SaveEarnedElement EarnedElement { get; set; } = new();
+
+        [XmlElement(ElementName = "over_radar")]
+        public string OverRadarRaw { get; set; } = string.Empty;
+
+        [XmlIgnore]
+        public List<int> OverRadar => OverRadarRaw
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(int.Parse).ToList();
+    }
+
+    public class SaveArena
+    {
+        [XmlElement(ElementName = "season")]
+        public int Season { get; set; }
+
+        [XmlElement(ElementName = "earned_rank_point")]
+        public int EarnedRankPoint { get; set; }
+
+        [XmlElement(ElementName = "earned_shop_point")]
+        public int EarnedShopPoint { get; set; }
+
+        [XmlElement(ElementName = "earned_ultimate_rate")]
+        public int EarnedUltimateRate { get; set; }
+
+        [XmlElement(ElementName = "earned_megamix_rate")]
+        public int EarnedMegamixRate { get; set; }
+
+        [XmlElement(ElementName = "earned_live_energy")]
+        public int EarnedLiveEnergy { get; set; }
+
+        [XmlElement(ElementName = "rank_play")]
+        public string RankPlay { get; set; } = string.Empty;
+
+        [XmlElement(ElementName = "ultimate_play")]
+        public string UltimatePlay { get; set; } = string.Empty;
     }
 
     public class SaveEarnedElement

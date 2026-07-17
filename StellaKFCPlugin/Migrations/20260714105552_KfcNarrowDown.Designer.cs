@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using StellaKFCPlugin.EF;
 
@@ -11,9 +12,11 @@ using StellaKFCPlugin.EF;
 namespace StellaKFCPlugin.Migrations
 {
     [DbContext(typeof(StellaKFCContext))]
-    partial class StellaKFCContextModelSnapshot : ModelSnapshot
+    [Migration("20260714105552_KfcNarrowDown")]
+    partial class KfcNarrowDown
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1378,12 +1381,6 @@ namespace StellaKFCPlugin.Migrations
                         .HasColumnType("bigint(20) unsigned")
                         .HasColumnName("blaster_pass_limit_date");
 
-                    b.Property<uint>("Blocks")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int(10) unsigned")
-                        .HasDefaultValue(10000u)
-                        .HasColumnName("blocks");
-
                     b.Property<int>("BplSupport")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int(11)")
@@ -1499,12 +1496,6 @@ namespace StellaKFCPlugin.Migrations
                     b.Property<byte>("NotesOption")
                         .HasColumnType("tinyint(3) unsigned")
                         .HasColumnName("notes_option");
-
-                    b.Property<uint>("Packets")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int(10) unsigned")
-                        .HasDefaultValue(10000u)
-                        .HasColumnName("packets");
 
                     b.Property<int>("Pcb")
                         .HasColumnType("int(11)")

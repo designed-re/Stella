@@ -19,9 +19,9 @@ namespace CorePlugin.Handlers
         [StellaHandler("dlstatus", "progress", typeof(DlstatusProgressRequest))]
         public async Task<DlstatusProgressResponse> DlstatusProgress() => new();
 
-        // posevent.income.sales.sale — asphyxia returns 3x status:0
+        // posevent.income.sales.sale — asphyxia returns 3 sibling status:0 elements.
         [StellaHandler("posevent", "income.sales.sale", typeof(PoseventRequest))]
-        public async Task<PoseventResponse> PoseventSale() => new();
+        public async Task<PoseventMultiResponse> PoseventSale() => new();
 
         // ins.netlog — asphyxia returns empty object
         [StellaHandler("ins", "netlog", typeof(InsNetlogRequest))]
@@ -59,6 +59,23 @@ namespace CorePlugin.Handlers
     {
         [XmlAttribute(AttributeName = "status")]
         public string Status { get; set; } = "0";
+    }
+
+    /// <summary>
+    /// asphyxia <c>posevent.income.sales.sale</c> returns
+    /// <c>send.object([{@attr:{status:0}}, x3])</c> — three sibling
+    /// <c>&lt;posevent status="0"/&gt;</c> elements under <c>&lt;response&gt;</c>.
+    /// </summary>
+    public class PoseventMultiResponse : IStellaMultiElementResponse
+    {
+        public string ElementName => "posevent";
+
+        public IReadOnlyList<object> Elements { get; } = new object[]
+        {
+            new PoseventResponse(),
+            new PoseventResponse(),
+            new PoseventResponse(),
+        };
     }
 
     [XmlRoot(ElementName = "ins")]

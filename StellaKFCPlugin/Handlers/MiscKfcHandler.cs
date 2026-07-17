@@ -26,12 +26,18 @@ namespace StellaKFCPlugin.Handlers
         [StellaHandler("game", "sv7_save_mega", typeof(StubRequest))]
         public async Task<StubResponse> SaveMegaNabla() => new();
 
+        [StellaHandler("game", "save_mega", typeof(StubRequest))]
+        public async Task<StubResponse> SaveMegaBare() => new();
+
         // exception — asphyxia stub (true)
         [StellaHandler("game", "sv6_exception", typeof(StubRequest))]
         public async Task<StubResponse> Exception() => new();
 
         [StellaHandler("game", "sv7_exception", typeof(StubRequest))]
         public async Task<StubResponse> ExceptionNabla() => new();
+
+        [StellaHandler("game", "exception", typeof(StubRequest))]
+        public async Task<StubResponse> ExceptionBare() => new();
 
         // log — asphyxia send.success()
         [StellaHandler("game", "sv6_log", typeof(StubRequest))]
@@ -40,12 +46,18 @@ namespace StellaKFCPlugin.Handlers
         [StellaHandler("game", "sv7_log", typeof(StubRequest))]
         public async Task<StubResponse> LogNabla() => new();
 
+        [StellaHandler("game", "log", typeof(StubRequest))]
+        public async Task<StubResponse> LogBare() => new();
+
         // entry_e — asphyxia logs eid, send.success()
         [StellaHandler("game", "sv6_entry_e", typeof(EntryERequest))]
         public async Task<StubResponse> EntryE() => new();
 
         [StellaHandler("game", "sv7_entry_e", typeof(EntryERequest))]
         public async Task<StubResponse> EntryENabla() => new();
+
+        [StellaHandler("game", "entry_e", typeof(EntryERequest))]
+        public async Task<StubResponse> EntryEBare() => new();
 
         // buy — asphyxia profiles.ts buy
         [StellaHandler("game", "sv6_buy", typeof(BuyRequest))]
@@ -54,12 +66,18 @@ namespace StellaKFCPlugin.Handlers
         [StellaHandler("game", "sv7_buy", typeof(BuyRequest))]
         public async Task<BuyResponse> BuyNabla() => await BuyInternal(7);
 
+        [StellaHandler("game", "buy", typeof(BuyRequest))]
+        public async Task<BuyResponse> BuyBare() => await BuyInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
         // print — asphyxia profiles.ts print
         [StellaHandler("game", "sv6_print", typeof(PrintRequest))]
         public async Task<PrintResponse> Print() => await PrintInternal(6);
 
         [StellaHandler("game", "sv7_print", typeof(PrintRequest))]
         public async Task<PrintResponse> PrintNabla() => await PrintInternal(7);
+
+        [StellaHandler("game", "print", typeof(PrintRequest))]
+        public async Task<PrintResponse> PrintBare() => await PrintInternal(Math.Abs(KfcVersion.GetVersion(Model)));
 
         private async Task<BuyResponse> BuyInternal(int gameVersion)
         {
@@ -70,7 +88,8 @@ namespace StellaKFCPlugin.Handlers
             var profile = await db.SvProfiles.SingleOrDefaultAsync(x => x.RefId == request.RefId && x.Version == gameVersion);
             if (profile is null) return new BuyResponse { Status = "1" };
 
-            // asphyxia buy: currency_type true=blocks, false=packets
+            // asphyxia buy: currency_type true=blocks, false=packets.
+            // growth[currency] - cost; only apply when balance + change >= 0 ($gte guard).
             int cost = (int)(request.ItemElement.Items?.Sum(i => (long)i.Price) ?? 0);
             int earnedBlocks = request.EarnedGamecoinBlock;
             int earnedPackets = request.EarnedGamecoinPacket;
@@ -78,19 +97,16 @@ namespace StellaKFCPlugin.Handlers
             if (request.CurrencyType)
             {
                 // blocks
-                int change = earnedBlocks - cost;
-                profile.Pcb += change;
+                long change = (long)earnedBlocks - cost;
+                if ((long)profile.Blocks + change >= 0)
+                    profile.Blocks = (uint)((long)profile.Blocks + change);
             }
             else
             {
-                // packets — Stella stores packets as a fixed 10000 in load, but
-                // we track via a separate field if needed. For now apply to Pcb
-                // as a generic currency since Stella doesn't have a separate
-                // packets column (gamecoin_packet is always 10000 in load).
-                // Actually asphyxia profile has separate packets/blocks. Stella
-                // SvProfile.Pcb = blocks. We need a packets field — but for now
-                // just apply to blocks to avoid data loss.
-                profile.Pcb += earnedBlocks - cost;
+                // packets
+                long change = (long)earnedPackets - cost;
+                if ((long)profile.Packets + change >= 0)
+                    profile.Packets = (uint)((long)profile.Packets + change);
             }
 
             // Save items
@@ -111,8 +127,8 @@ namespace StellaKFCPlugin.Handlers
 
             return new BuyResponse
             {
-                GamecoinPacket = 10000,
-                GamecoinBlock = (uint)profile.Pcb,
+                GamecoinPacket = profile.Packets,
+                GamecoinBlock = profile.Blocks,
             };
         }
 

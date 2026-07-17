@@ -102,6 +102,32 @@ namespace CorePlugin.Handlers
                     new ServiceItem { Name = "game.sv7_entry_e", Url = url },
                     new ServiceItem { Name = "game.sv7_exception", Url = url },
                     new ServiceItem { Name = "game.sv7_log", Url = url },
+                    // Bare game.* routes (used by GRAVITY WARS sv3 and earlier
+                    // — asphyxia registers these via MultiRoute alongside sv6/sv7).
+                    new ServiceItem { Name = "game.common", Url = url },
+                    new ServiceItem { Name = "game.new", Url = url },
+                    new ServiceItem { Name = "game.load", Url = url },
+                    new ServiceItem { Name = "game.load_m", Url = url },
+                    new ServiceItem { Name = "game.save", Url = url },
+                    new ServiceItem { Name = "game.save_m", Url = url },
+                    new ServiceItem { Name = "game.save_c", Url = url },
+                    new ServiceItem { Name = "game.save_pb", Url = url },
+                    new ServiceItem { Name = "game.save_valgene", Url = url },
+                    new ServiceItem { Name = "game.frozen", Url = url },
+                    new ServiceItem { Name = "game.buy", Url = url },
+                    new ServiceItem { Name = "game.print", Url = url },
+                    new ServiceItem { Name = "game.hiscore", Url = url },
+                    new ServiceItem { Name = "game.load_r", Url = url },
+                    new ServiceItem { Name = "game.lounge", Url = url },
+                    new ServiceItem { Name = "game.shop", Url = url },
+                    new ServiceItem { Name = "game.save_e", Url = url },
+                    new ServiceItem { Name = "game.save_mega", Url = url },
+                    new ServiceItem { Name = "game.play_e", Url = url },
+                    new ServiceItem { Name = "game.play_s", Url = url },
+                    new ServiceItem { Name = "game.entry_s", Url = url },
+                    new ServiceItem { Name = "game.entry_e", Url = url },
+                    new ServiceItem { Name = "game.exception", Url = url },
+                    new ServiceItem { Name = "game.log", Url = url },
                 }
             };
         }

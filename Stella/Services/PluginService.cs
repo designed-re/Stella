@@ -43,6 +43,7 @@ namespace Stella.Services
                         if (Activator.CreateInstance(pluginType) is IStellaPlugin instance)
                         {
                             _loadedPlugins.Add(instance);
+                            StellaPluginRegistry.Register(instance);
                             logger.LogInformation($"Loaded plugin: {instance.Name} v{instance.Version}");
                         }
                     }
