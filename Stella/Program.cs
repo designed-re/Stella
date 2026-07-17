@@ -61,16 +61,27 @@ namespace Stella
                     // Get processed EAMUSE data from middleware
                     var eAmuseData = httpContext.Items["ea"] as EAmuseXrpcData;
 
-                    // Validate the routing query parameter "f" (<service>.<method>)
-                    if (string.IsNullOrWhiteSpace(f) || f.IndexOf('.') < 0)
+                    // Resolve routing: prefer "f" param (modern: service.method),
+                    // fall back to "module"+"method" params (legacy: e.g.
+                    // module=services&method=get).
+                    string service;
+                    string method1;
+                    if (!string.IsNullOrWhiteSpace(f) && f.IndexOf('.') >= 0)
                     {
-                        logger.LogWarning("Invalid or missing 'f' query parameter: {f}", f ?? "<null>");
+                        var fParts = f.Split('.', 2);
+                        service = fParts[0];
+                        method1 = fParts[1];
+                    }
+                    else if (!string.IsNullOrWhiteSpace(module) && !string.IsNullOrWhiteSpace(method))
+                    {
+                        service = module;
+                        method1 = method;
+                    }
+                    else
+                    {
+                        logger.LogWarning("Invalid or missing routing params: f={f}, module={module}, method={method}", f ?? "<null>", module ?? "<null>", method ?? "<null>");
                         return;
                     }
-
-                    var fParts = f.Split('.', 2);
-                    var service = fParts[0];
-                    var method1 = fParts[1];
 
                     //TODO ADD PCBID Checking here
                     logger.LogInformation(model);
@@ -177,16 +188,27 @@ namespace Stella
                     // Get processed EAMUSE data from middleware
                     var eAmuseData = httpContext.Items["ea"] as EAmuseXrpcData;
 
-                    // Validate the routing query parameter "f" (<service>.<method>)
-                    if (string.IsNullOrWhiteSpace(f) || f.IndexOf('.') < 0)
+                    // Resolve routing: prefer "f" param (modern: service.method),
+                    // fall back to "module"+"method" params (legacy: e.g.
+                    // module=services&method=get).
+                    string service;
+                    string method1;
+                    if (!string.IsNullOrWhiteSpace(f) && f.IndexOf('.') >= 0)
                     {
-                        logger.LogWarning("Invalid or missing 'f' query parameter: {f}", f ?? "<null>");
+                        var fParts = f.Split('.', 2);
+                        service = fParts[0];
+                        method1 = fParts[1];
+                    }
+                    else if (!string.IsNullOrWhiteSpace(module) && !string.IsNullOrWhiteSpace(method))
+                    {
+                        service = module;
+                        method1 = method;
+                    }
+                    else
+                    {
+                        logger.LogWarning("Invalid or missing routing params: f={f}, module={module}, method={method}", f ?? "<null>", module ?? "<null>", method ?? "<null>");
                         return;
                     }
-
-                    var fParts = f.Split('.', 2);
-                    var service = fParts[0];
-                    var method1 = fParts[1];
 
                     //TODO ADD PCBID Checking here
                     logger.LogInformation(model);
