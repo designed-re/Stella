@@ -69,7 +69,7 @@ DB_PORT=$(echo "$KFC_DB" | sed -n 's/.*Port=\([^;]*\).*/\1/p')
 DB_PORT="${DB_PORT:-3306}"
 echo "[entrypoint] waiting for db at ${DB_HOST}:${DB_PORT} ..."
 i=0
-while [ $i -lt 60 ]; do
+while [ $i -lt 30 ]; do
   if (echo > /dev/tcp/${DB_HOST}/${DB_PORT}) 2>/dev/null; then
     echo "[entrypoint] db is reachable."
     break
