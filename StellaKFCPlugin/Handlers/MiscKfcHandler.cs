@@ -29,6 +29,10 @@ namespace StellaKFCPlugin.Handlers
         [StellaHandler("game", "save_mega", typeof(StubRequest))]
         public async Task<StubResponse> SaveMegaBare() => new();
 
+        [StellaHandler("game_3", "save_mega", typeof(StubRequest))]
+        public async Task<StubResponse> SaveMegaBareGame3() => new();
+
+
         // exception — asphyxia stub (true)
         [StellaHandler("game", "sv6_exception", typeof(StubRequest))]
         public async Task<StubResponse> Exception() => new();
@@ -38,6 +42,8 @@ namespace StellaKFCPlugin.Handlers
 
         [StellaHandler("game", "exception", typeof(StubRequest))]
         public async Task<StubResponse> ExceptionBare() => new();
+        [StellaHandler("game_3", "exception", typeof(StubRequest))]
+        public async Task<StubResponse> ExceptionBareGame3() => new();
 
         // log — asphyxia send.success()
         [StellaHandler("game", "sv6_log", typeof(StubRequest))]
@@ -48,6 +54,8 @@ namespace StellaKFCPlugin.Handlers
 
         [StellaHandler("game", "log", typeof(StubRequest))]
         public async Task<StubResponse> LogBare() => new();
+        [StellaHandler("game_3", "log", typeof(StubRequest))]
+        public async Task<StubResponse> LogBareGame3() => new();
 
         // entry_e — asphyxia logs eid, send.success()
         [StellaHandler("game", "sv6_entry_e", typeof(EntryERequest))]
@@ -58,6 +66,8 @@ namespace StellaKFCPlugin.Handlers
 
         [StellaHandler("game", "entry_e", typeof(EntryERequest))]
         public async Task<StubResponse> EntryEBare() => new();
+        [StellaHandler("game_3", "entry_e", typeof(EntryERequest))]
+        public async Task<StubResponse> EntryEBareGame3() => new();
 
         // buy — asphyxia profiles.ts buy
         [StellaHandler("game", "sv6_buy", typeof(BuyRequest))]
@@ -68,6 +78,8 @@ namespace StellaKFCPlugin.Handlers
 
         [StellaHandler("game", "buy", typeof(BuyRequest))]
         public async Task<BuyResponse> BuyBare() => await BuyInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+        [StellaHandler("game_3", "buy", typeof(BuyRequest))]
+        public async Task<BuyResponse> BuyBareGame3() => await BuyInternal(Math.Abs(KfcVersion.GetVersion(Model)));
 
         // print — asphyxia profiles.ts print
         [StellaHandler("game", "sv6_print", typeof(PrintRequest))]
@@ -78,6 +90,8 @@ namespace StellaKFCPlugin.Handlers
 
         [StellaHandler("game", "print", typeof(PrintRequest))]
         public async Task<PrintResponse> PrintBare() => await PrintInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+        [StellaHandler("game_3", "print", typeof(PrintRequest))]
+        public async Task<PrintResponse> PrintBareGame3() => await PrintInternal(Math.Abs(KfcVersion.GetVersion(Model)));
 
         private async Task<BuyResponse> BuyInternal(int gameVersion)
         {

@@ -27,6 +27,10 @@ namespace StellaKFCPlugin.Handlers
         [StellaHandler("game", "new", typeof(NewRequest))]
         public async Task<NewResponse> NewBare() => await NewInternal(Math.Abs(KfcVersion.GetVersion(Model)));
 
+        [StellaHandler("game_3", "new", typeof(NewRequest))]
+        public async Task<NewResponse> NewBareGame3() => await NewInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
+
         private async Task<NewResponse> NewInternal(int gameVersion)
         {
             var request = Request as NewRequest;

@@ -49,6 +49,8 @@ namespace StellaKFCPlugin.Handlers
 
         [StellaHandler("game", "lounge", typeof(LoungeRequest))]
         public async Task<LoungeResponse> LoungeBare() => await LoungeInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+        [StellaHandler("game_3", "lounge", typeof(LoungeRequest))]
+        public async Task<LoungeResponse> LoungeBareGame3() => await LoungeInternal(Math.Abs(KfcVersion.GetVersion(Model)));
 
         [StellaHandler("game", "sv6_entry_s", typeof(EntrySRequest))]
         public async Task<EntrySResponse> EntryS() => await EntrySInternal(6);
@@ -58,6 +60,10 @@ namespace StellaKFCPlugin.Handlers
 
         [StellaHandler("game", "entry_s", typeof(EntrySRequest))]
         public async Task<EntrySResponse> EntrySBare() => await EntrySInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
+        [StellaHandler("game_3", "entry_s", typeof(EntrySRequest))]
+        public async Task<EntrySResponse> EntrySBareGame3() => await EntrySInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
 
         private Task<LoungeResponse> LoungeInternal(int gameVersion)
         {

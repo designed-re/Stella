@@ -39,6 +39,10 @@ namespace StellaKFCPlugin.Handlers
         [StellaHandler("game", "common", typeof(GetCommonRequest))]
         public async Task<GetCommonResponse> GetCommonBare() => await BuildCommon(Math.Abs(KfcVersion.GetVersion(Model)));
 
+        [StellaHandler("game_3", "common", typeof(GetCommonRequest))]
+        public async Task<GetCommonResponse> GetCommonBareGame3() => await BuildCommon(Math.Abs(KfcVersion.GetVersion(Model)));
+
+
         private async Task<GetCommonResponse> BuildCommon(int gameVersion)
         {
             using var db = new StellaKFCContext();

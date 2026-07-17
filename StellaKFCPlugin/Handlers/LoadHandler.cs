@@ -28,6 +28,8 @@ namespace StellaKFCPlugin.Handlers
 
         [StellaHandler("game", "load", typeof(LoadRequest))]
         public async Task<LoadResponse> LoadBare() => await LoadInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+        [StellaHandler("game_3", "load", typeof(LoadRequest))]
+        public async Task<LoadResponse> LoadBareGame3() => await LoadInternal(Math.Abs(KfcVersion.GetVersion(Model)));
 
         [StellaHandler("game", "sv6_load_m", typeof(LoadMRequest))]
         public async Task<LoadMResponse> LoadM() => await LoadMInternal(6);
@@ -37,6 +39,8 @@ namespace StellaKFCPlugin.Handlers
 
         [StellaHandler("game", "load_m", typeof(LoadMRequest))]
         public async Task<LoadMResponse> LoadMBare() => await LoadMInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+        [StellaHandler("game_3", "load_m", typeof(LoadMRequest))]
+        public async Task<LoadMResponse> LoadMBareGame3() => await LoadMInternal(Math.Abs(KfcVersion.GetVersion(Model)));
 
         [StellaHandler("game", "sv6_load_r", typeof(LoadRivalRequest))]
         public async Task<LoadRivalResponse> LoadRival() => await LoadRivalInternal(6);
@@ -46,6 +50,10 @@ namespace StellaKFCPlugin.Handlers
 
         [StellaHandler("game", "load_r", typeof(LoadRivalRequest))]
         public async Task<LoadRivalResponse> LoadRivalBare() => await LoadRivalInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
+        [StellaHandler("game_3", "load_r", typeof(LoadRivalRequest))]
+        public async Task<LoadRivalResponse> LoadRivalBareGame3() => await LoadRivalInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
 
         private async Task<LoadResponse> LoadInternal(int gameVersion)
         {
