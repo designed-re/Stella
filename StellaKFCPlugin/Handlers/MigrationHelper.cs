@@ -155,6 +155,8 @@ public static class MigrationHelper
             SkillBaseId = 0,
             SkillNameId = 0,
             Pcb = 0,
+            Packets = 10000,
+            Blocks = 10000,
             PlayCount = 0, DayCount = 0, TodayCount = 0,
             PlayChain = 0, MaxPlayChain = 0,
             WeekCount = 0, WeekPlayCount = 0, WeekChain = 0, MaxWeekChain = 0,
@@ -195,9 +197,17 @@ public static class MigrationHelper
         }
 
         // 4. Migrate scores with clear-lamp remap and volforce computation.
+        // asphyxia viiMigrate: looks up the NABLA difficulty level from music_db
+        // (difficulty[6]) to recompute volforce, and skips songs not present in
+        // music_db. Stella's music_db.xml difnum values equal asphyxia's
+        // difficulty[6], so we parse them here.
+        var diffMap = LoadMusicDifficulties();
         var scores = db.SvScores.Where(s => s.Profile == profileId && s.Version == 6).AsEnumerable();
         foreach (var s in scores)
         {
+            // Skip scores whose chart is not in music_db (asphyxia foundSongIndex === -1).
+            if (!diffMap.TryGetValue(s.MusicId, out var diffs)) continue;
+
             int newClear = s.Clear >= 0 && s.Clear < EgToNablaClearLamp.Length
                 ? EgToNablaClearLamp[s.Clear] : s.Clear;
 
@@ -205,9 +215,9 @@ public static class MigrationHelper
             int idx = Array.FindIndex(ExScoreResetList, t => t.Mid == s.MusicId && t.Type == s.Type);
             if (idx >= 0) exscore = 0;
 
-            // Difficulty level lookup (would come from music_db; here we leave 0 if unknown
-            // — handler code can recompute later when music_db is loaded).
-            double diff = 0;
+            // Difficulty level from music_db difnum for this chart type (0..5),
+            // overridden by levelDifOverride when present (asphyxia migrate L289-292).
+            double diff = s.Type >= 0 && s.Type < diffs.Length ? diffs[s.Type] : 0;
             int lvIdx = Array.FindIndex(LevelDifOverride, t => t.Mid == s.MusicId && t.Type == s.Type);
             if (lvIdx >= 0) diff = LevelDifOverride[lvIdx].Lvl;
 
@@ -223,5 +233,59 @@ public static class MigrationHelper
         }
 
         await db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Parses <c>Data/Seed/music_db.xml</c> (shift_jis) and returns a map of
+    /// music id -> difficulty levels [novice, advanced, exhaust, infinite,
+    /// maximum, ultimate]. Mirrors asphyxia's <c>difficulty[6][diffName]</c>
+    /// lookup used by <c>viiMigrate</c>.
+    /// </summary>
+    private static Dictionary<int, double[]> LoadMusicDifficulties()
+    {
+        var result = new Dictionary<int, double[]>();
+        var path = Path.Combine(Directory.GetCurrentDirectory(), "Data", "Seed", "music_db.xml");
+        if (!File.Exists(path))
+            path = Path.Combine(AppContext.BaseDirectory, "Data", "Seed", "music_db.xml");
+        if (!File.Exists(path)) return result;
+
+        System.Text.Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        var enc = System.Text.Encoding.GetEncoding("shift_jis");
+        var text = enc.GetString(File.ReadAllBytes(path));
+
+        var settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Ignore };
+        using var strReader = new StringReader(text);
+        using var reader = XmlReader.Create(strReader, settings);
+
+        // diffName index: 0=novice,1=advanced,2=exhaust,3=infinite,4=maximum,5=ultimate
+        var diffNames = new[] { "novice", "advanced", "exhaust", "infinite", "maximum", "ultimate" };
+
+        while (reader.Read())
+        {
+            if (reader.NodeType != XmlNodeType.Element || reader.Name != "music") continue;
+            int id = int.Parse(reader.GetAttribute("id")!, CultureInfo.InvariantCulture);
+
+            using var sub = reader.ReadSubtree();
+            double[] diffs = { 0, 0, 0, 0, 0, 0 };
+            while (sub.Read())
+            {
+                if (sub.NodeType != XmlNodeType.Element) continue;
+                int di = Array.IndexOf(diffNames, sub.Name);
+                if (di < 0) continue;
+                // Read the <difnum> child of this difficulty element.
+                using var dsub = sub.ReadSubtree();
+                while (dsub.Read())
+                {
+                    if (dsub.NodeType == XmlNodeType.Element && dsub.Name == "difnum")
+                    {
+                        if (double.TryParse(dsub.ReadElementContentAsString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var v))
+                            diffs[di] = v;
+                        break;
+                    }
+                }
+            }
+            result[id] = diffs;
+        }
+        return result;
     }
 }

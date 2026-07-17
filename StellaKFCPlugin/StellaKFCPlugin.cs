@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Builder;
+using System.Linq;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -41,6 +42,17 @@ namespace StellaKFCPlugin
             var (connStr, serverVersion) = StellaKFCContext.ResolveConfiguration();
             builder.Services.AddDbContext<StellaKFCContext>(x => x.UseMySql(connStr, serverVersion));
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// asphyxia <c>CheckProfile</c>: true when any profile exists for
+        /// <paramref name="refid"/>. Used by CorePlugin's <c>cardmng.inquire</c>
+        /// to report an accurate <c>binded</c> flag.
+        /// </summary>
+        public Task<bool> ProfileExistsAsync(string refid)
+        {
+            using var db = new StellaKFCContext();
+            return Task.FromResult(db.SvProfiles.Any(p => p.RefId == refid));
         }
 
         public Task OnAppInitialize(WebApplication app)

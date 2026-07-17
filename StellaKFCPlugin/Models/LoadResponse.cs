@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Xml;
+using System.Xml.Schema;
 using System.Xml.Serialization;
 
 namespace StellaKFCPlugin.Models
@@ -224,10 +226,39 @@ namespace StellaKFCPlugin.Models
         public int Power { get; set; }
 
         [XmlElement(ElementName = "over_radar")]
-        public List<int> OverRadar { get; set; } = new();
+        public OverRadarList OverRadar { get; set; } = new();
 
         [XmlElement(ElementName = "element")]
         public VariantElement Element { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Serializes the <c>over_radar</c> array as a single KBinXML element with
+    /// <c>__type="s32"</c> and <c>__count</c> attributes. Unlike <see cref="List{T}"/>,
+    /// this always emits the element (even when empty, <c>__count="0"</c>) so the
+    /// game does not crash on a missing node — matching asphyxia's pug which renders
+    /// <c>over_radar(__count=variant.overRadar.length)</c> regardless of contents.
+    /// </summary>
+    public class OverRadarList : List<int>, IXmlSerializable
+    {
+        public OverRadarList() { }
+        public OverRadarList(IEnumerable<int> values) : base(values) { }
+
+        public XmlSchema GetSchema() => null;
+
+        public void ReadXml(XmlReader reader)
+        {
+            var parts = reader.ReadElementContentAsString()
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var v in parts) Add(int.Parse(v));
+        }
+
+        public void WriteXml(XmlWriter writer)
+        {
+            writer.WriteAttributeString("__type", "s32");
+            writer.WriteAttributeString("__count", Count.ToString());
+            writer.WriteString(string.Join(" ", this));
+        }
     }
 
     [XmlRoot(ElementName = "element")]

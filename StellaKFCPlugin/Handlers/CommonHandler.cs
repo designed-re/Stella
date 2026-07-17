@@ -36,6 +36,13 @@ namespace StellaKFCPlugin.Handlers
         [StellaHandler("game", "sv7_common", typeof(GetCommonRequest))]
         public async Task<GetCommonResponse> GetCommonNabla() => await BuildCommon(7);
 
+        [StellaHandler("game", "common", typeof(GetCommonRequest))]
+        public async Task<GetCommonResponse> GetCommonBare() => await BuildCommon(Math.Abs(KfcVersion.GetVersion(Model)));
+
+        [StellaHandler("game_3", "common", typeof(GetCommonRequest))]
+        public async Task<GetCommonResponse> GetCommonBareGame3() => await BuildCommon(Math.Abs(KfcVersion.GetVersion(Model)));
+
+
         private async Task<GetCommonResponse> BuildCommon(int gameVersion)
         {
             using var db = new StellaKFCContext();
@@ -124,8 +131,15 @@ namespace StellaKFCPlugin.Handlers
                 // --- Extend ---
                 response.Extend = BuildExtend(extend);
 
-                // --- Music override (loose element) ---
-                response.Music = new MusicOverrideElement();
+                // --- Music override (asphyxia common.ts L319-343) ---
+                // Filter by start date (checkVerStart(0,0,m.start,date)); each
+                // song emits two sibling <info> elements (info + charts).
+                response.Music = new MusicOverrideElement
+                {
+                    Overrides = musicOverride
+                        .Where(m => KfcVersion.CheckVerStart(0, 0, m.StartDate, date))
+                        .ToList(),
+                };
 
                 // --- Music limited ---
                 response.MusicLimited = await BuildMusicLimited(db, provider, gameVersion, dVersion, currentYmd, cabType, licensedSongs, egSongsLocked, kfcConfig);

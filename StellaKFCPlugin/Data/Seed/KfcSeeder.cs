@@ -361,14 +361,24 @@ public static class KfcSeeder
         var existing = db.SvMusicOverrides.Where(m => m.Version == version).Select(m => m.MusicId).ToHashSet();
         foreach (var m in arr!)
         {
-            int mid = m["id"]?.Value<int>() ?? 0;
+            // asphyxia MUSIC_OVERRIDE entries use `music_id` (not `id`); the
+            // info keys are every top-level key except `charts` and `start`.
+            int mid = m["music_id"]?.Value<int>() ?? 0;
             if (mid == 0 || existing.Contains(mid)) continue;
+
+            var infoObj = new JObject();
+            foreach (var prop in m.Children<JProperty>())
+            {
+                if (prop.Name == "charts" || prop.Name == "start") continue;
+                infoObj[prop.Name] = prop.Value.DeepClone();
+            }
+
             db.SvMusicOverrides.Add(new SvMusicOverride
             {
                 Version = version,
                 MusicId = mid,
                 StartDate = m["start"]?.Value<int>() ?? 0,
-                InfoJson = (m["info"] ?? new JObject()).ToString(Formatting.None),
+                InfoJson = infoObj.ToString(Formatting.None),
                 ChartsJson = (m["charts"] ?? new JObject()).ToString(Formatting.None),
             });
         }

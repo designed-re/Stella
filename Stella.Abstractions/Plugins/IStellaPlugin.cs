@@ -18,5 +18,14 @@ namespace Stella.Abstractions.Plugins
 
         Task OnBuilderInitialize(WebApplicationBuilder builder);
         Task OnAppInitialize(WebApplication app);
+
+        /// <summary>
+        /// Returns true when a profile exists for <paramref name="refid"/> in
+        /// this plugin's data store. Mirrors asphyxia
+        /// <c>CheckProfile(gameCode, refid)</c> used by <c>cardmng.inquire</c> to
+        /// report an accurate <c>binded</c> flag. Game plugins override this;
+        /// the default (core/non-game plugins) is <c>false</c>.
+        /// </summary>
+        Task<bool> ProfileExistsAsync(string refid) => Task.FromResult(false);
     }
 }

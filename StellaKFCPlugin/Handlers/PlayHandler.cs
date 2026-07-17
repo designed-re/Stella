@@ -22,10 +22,27 @@ namespace StellaKFCPlugin.Handlers
         [StellaHandler("game", "sv7_play_e", typeof(PlaySERequest))]
         public async Task<PlaySEResponse> PlayENabla() => new();
 
+        [StellaHandler("game", "play_s", typeof(PlaySERequest))]
+        public async Task<PlaySEResponse> PlaySBare() => new();
+
+        [StellaHandler("game_3", "play_s", typeof(PlaySERequest))]
+        public async Task<PlaySEResponse> PlaySBareGame3() => new();
+
+
+        [StellaHandler("game", "play_e", typeof(PlaySERequest))]
+        public async Task<PlaySEResponse> PlayEBare() => new();
+        [StellaHandler("game_3", "play_e", typeof(PlaySERequest))]
+        public async Task<PlaySEResponse> PlayEBareGame3() => new();
+
         [StellaHandler("game", "sv6_shop", typeof(ShopRequest))]
         public async Task<ShopResponse> Shop() => new();
 
         [StellaHandler("game", "sv7_shop", typeof(ShopRequest))]
         public async Task<ShopResponse> ShopNabla() => new();
+
+        [StellaHandler("game", "shop", typeof(ShopRequest))]
+        public async Task<ShopResponse> ShopBare() => new();
+        [StellaHandler("game_3", "shop", typeof(ShopRequest))]
+        public async Task<ShopResponse> ShopBareGame3() => new();
     }
 }

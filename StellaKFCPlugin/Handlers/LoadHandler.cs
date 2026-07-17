@@ -26,17 +26,34 @@ namespace StellaKFCPlugin.Handlers
         [StellaHandler("game", "sv7_load", typeof(LoadRequest))]
         public async Task<LoadResponse> LoadNabla() => await LoadInternal(7);
 
+        [StellaHandler("game", "load", typeof(LoadRequest))]
+        public async Task<LoadResponse> LoadBare() => await LoadInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+        [StellaHandler("game_3", "load", typeof(LoadRequest))]
+        public async Task<LoadResponse> LoadBareGame3() => await LoadInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
         [StellaHandler("game", "sv6_load_m", typeof(LoadMRequest))]
         public async Task<LoadMResponse> LoadM() => await LoadMInternal(6);
 
         [StellaHandler("game", "sv7_load_m", typeof(LoadMRequest))]
         public async Task<LoadMResponse> LoadMNabla() => await LoadMInternal(7);
 
+        [StellaHandler("game", "load_m", typeof(LoadMRequest))]
+        public async Task<LoadMResponse> LoadMBare() => await LoadMInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+        [StellaHandler("game_3", "load_m", typeof(LoadMRequest))]
+        public async Task<LoadMResponse> LoadMBareGame3() => await LoadMInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
         [StellaHandler("game", "sv6_load_r", typeof(LoadRivalRequest))]
-        public async Task<LoadRivalResponse> LoadRival() => new();
+        public async Task<LoadRivalResponse> LoadRival() => await LoadRivalInternal(6);
 
         [StellaHandler("game", "sv7_load_r", typeof(LoadRivalRequest))]
-        public async Task<LoadRivalResponse> LoadRivalNabla() => new();
+        public async Task<LoadRivalResponse> LoadRivalNabla() => await LoadRivalInternal(7);
+
+        [StellaHandler("game", "load_r", typeof(LoadRivalRequest))]
+        public async Task<LoadRivalResponse> LoadRivalBare() => await LoadRivalInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
+        [StellaHandler("game_3", "load_r", typeof(LoadRivalRequest))]
+        public async Task<LoadRivalResponse> LoadRivalBareGame3() => await LoadRivalInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
 
         private async Task<LoadResponse> LoadInternal(int gameVersion)
         {
@@ -129,8 +146,8 @@ namespace StellaKFCPlugin.Handlers
                 Name = profile.Name,
                 Code = profile.Code,
                 SdvxId = profile.Code,
-                GamecoinPacket = 10000,
-                GamecoinBlock = (uint)profile.Pcb,
+                GamecoinPacket = profile.Packets,
+                GamecoinBlock = profile.Blocks,
                 AppealId = profile.AppealId,
                 LastMusicId = profile.LastMusicId,
                 LastMusicType = profile.LastMusicType,
@@ -147,7 +164,7 @@ namespace StellaKFCPlugin.Handlers
                 DrawAdjust = profile.DrawAdjust,
                 EffCLeft = profile.EffCLeft,
                 EffCRight = profile.EffCRight,
-                NarrowDown = 0,
+                NarrowDown = profile.NarrowDown,
                 KacId = profile.KacId,
                 SkillLevel = skill.Level,
                 SkillBaseId = skill.Base,
@@ -162,7 +179,7 @@ namespace StellaKFCPlugin.Handlers
                 },
                 Eaappli = new Eaappli { Relation = 1 },
                 Cloud = new Cloud { Relation = 1 },
-                BlockNo = profile.Pcb,
+                BlockNo = 0,
                 PlayCount = profile.PlayCount,
                 DayCount = profile.DayCount,
                 TodayCount = profile.TodayCount,
@@ -245,9 +262,12 @@ namespace StellaKFCPlugin.Handlers
             // and always renders the variant_gate element. over_radar is always
             // present (asphyxia __count=0 for empty). We ensure at least one element
             // so XmlSerializer emits the node; XDocumentTypeExtensions adds __count.
-            var overRadarList = variant != null && !string.IsNullOrEmpty(variant.OverRadar)
-                ? variant.OverRadar.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList()
-                : new List<int> { 0 };
+            var overRadarList = new OverRadarList();
+            if (variant != null && !string.IsNullOrEmpty(variant.OverRadar))
+            {
+                foreach (var v in variant.OverRadar.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                    overRadarList.Add(int.Parse(v));
+            }
             response.VariantGate = new VariantGateElement
             {
                 Power = variant?.Power ?? 0,
@@ -317,6 +337,52 @@ namespace StellaKFCPlugin.Handlers
                     for (int i = 0; i < 10; i++) param.Add(0);
                 }
                 response.Music.Infos.Add(new MusicInfo { Param = param });
+            }
+            return response;
+        }
+
+        private async Task<LoadRivalResponse> LoadRivalInternal(int gameVersion)
+        {
+            var request = Request as LoadRivalRequest;
+            if (request is null) return new LoadRivalResponse { Status = "1" };
+
+            using var db = new StellaKFCContext();
+            var dVersion = KfcVersion.GetDateCode(Model);
+            var response = new LoadRivalResponse();
+
+            // asphyxia rival: mutual rivals of the requester, excluding self.
+            var rivals = await db.SvRivals
+                .Where(r => r.RefId == request.Refid && r.Mutual && r.Version == gameVersion)
+                .ToListAsync();
+            rivals = rivals.Where(r => r.RivalRefId != request.Refid).ToList();
+
+            short no = 0;
+            foreach (var r in rivals)
+            {
+                var entry = new RivalEntry
+                {
+                    No = no++,
+                    Seq = KfcVersion.IdToCode(r.SdvxId),
+                    Name = r.Name ?? string.Empty,
+                };
+
+                // Load the rival's score records (asphyxia DB.Find music by refid).
+                var rivalProfile = await db.SvProfiles
+                    .SingleOrDefaultAsync(x => x.RefId == r.RivalRefId && x.Version == gameVersion);
+                if (rivalProfile is not null)
+                {
+                    var rivalScores = await db.SvScores
+                        .Where(x => x.Profile == rivalProfile.Id && x.Version == gameVersion)
+                        .ToListAsync();
+                    foreach (var sc in rivalScores)
+                    {
+                        var param = dVersion < 20230425
+                            ? new List<uint> { (uint)sc.MusicId, (uint)sc.Type, (uint)sc.Score, (uint)sc.Clear, (uint)sc.Grade }
+                            : new List<uint> { (uint)sc.MusicId, (uint)sc.Type, (uint)sc.Score, (uint)sc.Exscore, (uint)sc.Clear, (uint)sc.Grade };
+                        entry.Music.Add(new RivalMusic { Param = param });
+                    }
+                }
+                response.Rivals.Add(entry);
             }
             return response;
         }

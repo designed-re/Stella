@@ -23,6 +23,13 @@ namespace StellaKFCPlugin.Handlers
         [StellaHandler("game", "sv7_hiscore", typeof(HiscoreRequest))]
         public async Task<HiscoreResponse> HiscoreNabla() => await HiscoreInternal(7);
 
+        [StellaHandler("game", "hiscore", typeof(HiscoreRequest))]
+        public async Task<HiscoreResponse> HiscoreBare() => await HiscoreInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
+        [StellaHandler("game_3", "hiscore", typeof(HiscoreRequest))]
+        public async Task<HiscoreResponse> HiscoreBareGame3() => await HiscoreInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
+
         private async Task<HiscoreResponse> HiscoreInternal(int gameVersion)
         {
             using var db = new StellaKFCContext();

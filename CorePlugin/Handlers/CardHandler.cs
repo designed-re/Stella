@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 using CorePlugin.EF;
 using CorePlugin.Models;
 using Stella.Abstractions;
@@ -16,25 +17,32 @@ namespace CorePlugin.Handlers
             var request = Request as CardInquireRequest;
 
             using var context = new CoreContext();
-            var card = context.Cards.FirstOrDefault(x=> x.CardId == request.Cardid);
+            var card = context.Cards.FirstOrDefault(x => x.CardId == request.Cardid);
 
             if (card is null)
             {
-                return new CardInquireResponse(){Status = "112"};
+                return new CardInquireResponse() { Status = "112" };
             }
-            else
+
+            // asphyxia cardmng.inquire: binded = CheckProfile(gameCode, refid) ? 1 : 0.
+            // The game code is the first colon-delimited segment of the model
+            // string (e.g. "KFC:J:A:A:..."). We query the matching game plugin
+            // through the shared registry so CorePlugin needs no direct reference
+            // to game-plugin data stores.
+            string gameCode = Model?.Split(':').FirstOrDefault() ?? string.Empty;
+            var gamePlugin = StellaPluginRegistry.GetByGameCode(gameCode);
+            bool binded = gamePlugin is not null && await gamePlugin.ProfileExistsAsync(card.RefId);
+
+            return new CardInquireResponse()
             {
-                return new CardInquireResponse()
-                {
-                    Binded = 1,
-                    Dataid = card.RefId,
-                    Ecflag = 1,
-                    Newflag = 0,
-                    Expired = 0,
-                    Refid = card.RefId,
-                    Status = "0"
-                };
-            }
+                Binded = binded ? 1 : 0,
+                Dataid = card.RefId,
+                Ecflag = 1,
+                Newflag = 0,
+                Expired = 0,
+                Refid = card.RefId,
+                Status = "0"
+            };
         }
 
         [StellaHandler("cardmng", "authpass", typeof(CardAuthpassRequest))]

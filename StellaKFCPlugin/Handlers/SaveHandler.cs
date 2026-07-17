@@ -27,11 +27,21 @@ namespace StellaKFCPlugin.Handlers
         [StellaHandler("game", "sv7_save_m", typeof(SaveMRequest))]
         public async Task<SaveMResponse> SaveMusicNabla() => await SaveMusicInternal(7);
 
+        [StellaHandler("game", "save_m", typeof(SaveMRequest))]
+        public async Task<SaveMResponse> SaveMusicBare() => await SaveMusicInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+        [StellaHandler("game_3", "save_m", typeof(SaveMRequest))]
+        public async Task<SaveMResponse> SaveMusicBareGame3() => await SaveMusicInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
         [StellaHandler("game", "sv6_save", typeof(SaveRequest))]
         public async Task<SaveResponse> Save() => await SaveInternal(6);
 
         [StellaHandler("game", "sv7_save", typeof(SaveRequest))]
         public async Task<SaveResponse> SaveNabla() => await SaveInternal(7);
+
+        [StellaHandler("game", "save", typeof(SaveRequest))]
+        public async Task<SaveResponse> SaveBare() => await SaveInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+        [StellaHandler("game_3", "save", typeof(SaveRequest))]
+        public async Task<SaveResponse> SaveBareGame3() => await SaveInternal(Math.Abs(KfcVersion.GetVersion(Model)));
 
         [StellaHandler("game", "sv6_save_e", typeof(SaveRequest))]
         public async Task<SaveResponse> SaveE() => new();
@@ -39,11 +49,21 @@ namespace StellaKFCPlugin.Handlers
         [StellaHandler("game", "sv7_save_e", typeof(SaveRequest))]
         public async Task<SaveResponse> SaveENabla() => new();
 
+        [StellaHandler("game", "save_e", typeof(SaveRequest))]
+        public async Task<SaveResponse> SaveEBare() => new();
+        [StellaHandler("game_3", "save_e", typeof(SaveRequest))]
+        public async Task<SaveResponse> SaveEBareGame3() => new();
+
         [StellaHandler("game", "sv6_save_c", typeof(SaveCourseRequest))]
         public async Task<SaveResponse> SaveCourse() => await SaveCourseInternal(6);
 
         [StellaHandler("game", "sv7_save_c", typeof(SaveCourseRequest))]
         public async Task<SaveResponse> SaveCourseNabla() => await SaveCourseInternal(7);
+
+        [StellaHandler("game", "save_c", typeof(SaveCourseRequest))]
+        public async Task<SaveResponse> SaveCourseBare() => await SaveCourseInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+        [StellaHandler("game_3", "save_c", typeof(SaveCourseRequest))]
+        public async Task<SaveResponse> SaveCourseBareGame3() => await SaveCourseInternal(Math.Abs(KfcVersion.GetVersion(Model)));
 
         [StellaHandler("game", "sv6_save_valgene", typeof(SaveValgeneRequest))]
         public async Task<SaveValgeneResponse> SaveValgene() => await SaveValgeneInternal(6);
@@ -51,11 +71,23 @@ namespace StellaKFCPlugin.Handlers
         [StellaHandler("game", "sv7_save_valgene", typeof(SaveValgeneRequest))]
         public async Task<SaveValgeneResponse> SaveValgeneNabla() => await SaveValgeneInternal(7);
 
+        [StellaHandler("game", "save_valgene", typeof(SaveValgeneRequest))]
+        public async Task<SaveValgeneResponse> SaveValgeneBare() => await SaveValgeneInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+        [StellaHandler("game_3", "save_valgene", typeof(SaveValgeneRequest))]
+        public async Task<SaveValgeneResponse> SaveValgeneBareGame3() => await SaveValgeneInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
         [StellaHandler("game", "sv6_save_pb", typeof(SavePbRequest))]
         public async Task<SavePbResponse> SavePb() => await SavePbInternal(6);
 
         [StellaHandler("game", "sv7_save_pb", typeof(SavePbRequest))]
         public async Task<SavePbResponse> SavePbNabla() => await SavePbInternal(7);
+
+        [StellaHandler("game", "save_pb", typeof(SavePbRequest))]
+        public async Task<SavePbResponse> SavePbBare() => await SavePbInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
+        [StellaHandler("game_3", "save_pb", typeof(SavePbRequest))]
+        public async Task<SavePbResponse> SavePbBareGame3() => await SavePbInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
 
         private async Task<SaveMResponse> SaveMusicInternal(int gameVersion)
         {
@@ -104,11 +136,7 @@ namespace StellaKFCPlugin.Handlers
                 }
                 record.Grade = Math.Max(t.ScoreGrade, record.Grade);
 
-                if (gameVersion == 7)
-                {
-                    if (t.Volforce > record.Volforce) record.Volforce = t.Volforce;
-                }
-                record.PlayCount++;
+                if (t.Volforce > record.Volforce) record.Volforce = t.Volforce;
 
                 if (isNew) db.SvScores.Add(record);
                 else db.SvScores.Update(record);
@@ -143,9 +171,11 @@ namespace StellaKFCPlugin.Handlers
             profile.DrawAdjust = request.DrawAdjust;
             profile.EffCLeft = request.EffCLeft;
             profile.EffCRight = request.EffCRight;
+            profile.NarrowDown = request.NarrowDown;
 
-            // Profile $inc.
-            profile.Pcb += request.EarnedGamecoinPacket + request.EarnedGamecoinBlock;
+            // Profile $inc (asphyxia: separate packets/blocks increments).
+            profile.Packets += (uint)request.EarnedGamecoinPacket;
+            profile.Blocks += (uint)request.EarnedGamecoinBlock;
             profile.BlasterEnergy += (uint)request.EarnedBlasterEnergy;
             profile.PlayCount++;
             profile.DayCount++;
@@ -164,22 +194,25 @@ namespace StellaKFCPlugin.Handlers
                 var c = request.Course;
                 var rec = await db.SvCourseRecords.SingleOrDefaultAsync(x =>
                     x.Profile == profile.Id && x.SeriesId == c.SeasonId && x.CourseId == c.CourseId &&
-                    x.SkillType == 0 && x.Version == gameVersion);
+                    x.SkillType == c.SkillType && x.Version == gameVersion);
                 if (rec is null)
                 {
                     db.SvCourseRecords.Add(new SvCourseRecord
                     {
                         Profile = profile.Id, SeriesId = c.SeasonId, CourseId = c.CourseId,
-                        SkillType = 0, Version = gameVersion, Score = c.Score, Exscore = 0,
-                        Clear = c.Clear, Grade = c.Grade, Rate = c.Rate, Count = 1,
+                        SkillType = c.SkillType, Version = gameVersion, Score = c.Score,
+                        Exscore = c.Exscore, Clear = c.Clear, Grade = c.Grade, Rate = c.Rate,
+                        Count = 1, KacId = c.KacId ?? string.Empty,
                     });
                 }
                 else
                 {
                     rec.Score = Math.Max(c.Score, rec.Score);
+                    rec.Exscore = Math.Max(c.Exscore, rec.Exscore);
                     rec.Clear = Math.Max(c.Clear, rec.Clear);
                     rec.Grade = Math.Max(c.Grade, rec.Grade);
                     rec.Rate = Math.Max(c.Rate, rec.Rate);
+                    rec.KacId = c.KacId ?? rec.KacId;
                     rec.Count++;
                     db.SvCourseRecords.Update(rec);
                 }
@@ -228,10 +261,31 @@ namespace StellaKFCPlugin.Handlers
                 db.SvSkills.Update(skill);
             }
 
-            // Arena (asphyxia save L661-693): not present in SaveRequest model yet.
-            // (Request model would need an `arena` element; left for follow-up.)
+            // Arena (asphyxia save L661-693): per-season arena progress ($inc fields).
+            foreach (var are in request.ArenaList)
+            {
+                var arenaRec = await db.SvArenas.SingleOrDefaultAsync(x =>
+                    x.Profile == profile.Id && x.Season == are.Season && x.Version == gameVersion);
+                if (arenaRec is null)
+                {
+                    arenaRec = new SvArena { Profile = profile.Id, Season = are.Season, Version = gameVersion };
+                    db.SvArenas.Add(arenaRec);
+                }
+                else
+                {
+                    db.SvArenas.Update(arenaRec);
+                }
+                arenaRec.UltimateRate += are.EarnedUltimateRate;
+                arenaRec.MegamixRate += are.EarnedMegamixRate;
+                arenaRec.ShopPoint += are.EarnedShopPoint;
+                arenaRec.RankPoint += are.EarnedRankPoint;
+                arenaRec.LiveEnergy += are.EarnedLiveEnergy;
+                arenaRec.RankCount += are.RankPlay == "true" ? 1 : 0;
+                arenaRec.UltimateCount += are.UltimatePlay == "true" ? 1 : 0;
+            }
 
-            // Variant gate (asphyxia save L696-724): present in SaveRequest as VariantGate.
+            // Variant gate (asphyxia save L696-724): $inc earned power/elements,
+            // $set over_radar when present.
             if (request.VariantGate is not null)
             {
                 var vg = request.VariantGate;
@@ -255,6 +309,8 @@ namespace StellaKFCPlugin.Handlers
                     vp.Onehand += vg.EarnedElement.OneHand;
                     vp.Handtrip += vg.EarnedElement.HandTrip;
                 }
+                if (vg.OverRadar.Count > 0)
+                    vp.OverRadar = string.Join(' ', vg.OverRadar);
             }
 
             await db.SaveChangesAsync();
@@ -412,6 +468,68 @@ namespace StellaKFCPlugin.Handlers
             }
 
             return new SavePbResponse { Exp = request.Exp, Result = true };
+        }
+
+        private async Task<SaveEResponse> SaveEInternal(int gameVersion)
+        {
+            var request = Request as SaveERequest;
+            if (request is null) return new SaveEResponse { Status = "1" };
+
+            using var db = new StellaKFCContext();
+            var response = new SaveEResponse();
+
+            var profile = await db.SvProfiles.SingleOrDefaultAsync(x => x.RefId == request.RefId && x.Version == gameVersion);
+
+            foreach (var w in request.WeeklyMusic)
+            {
+                var existing = await db.SvWeeklyMusicScores.SingleOrDefaultAsync(x =>
+                    x.RefId == request.RefId && x.Week == w.WeekId && x.Mid == w.MusicId &&
+                    x.Mtype == w.MusicType && x.Version == gameVersion);
+                int curExscore = existing?.Exscore ?? 0;
+
+                // asphyxia saveE: only upsert + rank when the new exscore beats the record.
+                if (w.Exscore > curExscore)
+                {
+                    if (existing is null)
+                    {
+                        db.SvWeeklyMusicScores.Add(new SvWeeklyMusicScore
+                        {
+                            RefId = request.RefId, Week = w.WeekId, Mid = w.MusicId,
+                            Mtype = w.MusicType, Version = gameVersion, Exscore = w.Exscore,
+                            Name = profile?.Name ?? string.Empty, PlayCount = w.PlayCount,
+                            HiscoreCount = w.HiscoreCount,
+                        });
+                    }
+                    else
+                    {
+                        existing.Exscore = w.Exscore;
+                        existing.Name = profile?.Name ?? existing.Name;
+                        existing.PlayCount += w.PlayCount;
+                        existing.HiscoreCount += w.HiscoreCount;
+                        db.SvWeeklyMusicScores.Update(existing);
+                    }
+                    await db.SaveChangesAsync();
+
+                    // Rank: order all entries for this chart by exscore desc; find the
+                    // requester's position (asphyxia getRankListDB + refid filter).
+                    var ranked = await db.SvWeeklyMusicScores
+                        .Where(x => x.Version == gameVersion && x.Week == w.WeekId &&
+                                    x.Mid == w.MusicId && x.Mtype == w.MusicType)
+                        .OrderByDescending(x => x.Exscore)
+                        .ToListAsync();
+                    int rank = 0;
+                    for (int i = 0; i < ranked.Count; i++)
+                    {
+                        if (ranked[i].RefId == request.RefId) { rank = i + 1; break; }
+                    }
+                    response.WeeklyMusic.Add(new SaveEWeeklyMusic
+                    {
+                        WeekId = w.WeekId, MusicId = w.MusicId, MusicType = w.MusicType,
+                        Exscore = (uint)w.Exscore, Rank = rank,
+                    });
+                }
+            }
+            return response;
         }
     }
 }
