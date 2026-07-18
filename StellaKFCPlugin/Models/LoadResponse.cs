@@ -96,7 +96,7 @@ namespace StellaKFCPlugin.Models
         public short SkillType { get; set; }
 
         [XmlElement(ElementName = "support_team_id")]
-        public int SupportTeamId { get; set; }
+        public int? SupportTeamId { get; set; }
 
         [XmlElement(ElementName = "weekly_music")]
         public List<LoadWeeklyMusic> WeeklyMusic { get; set; } = new();
@@ -307,7 +307,7 @@ namespace StellaKFCPlugin.Models
     public class AdditionalInfoElement
     {
         [XmlElement(ElementName = "pro_team_id")]
-        public string ProTeamId { get; set; } = string.Empty;
+        public string? ProTeamId { get; set; }
     }
 
     [XmlRoot(ElementName = "weekly_music")]

@@ -97,11 +97,9 @@ namespace StellaKFCPlugin.Handlers
             var arena = await db.SvArenas.SingleOrDefaultAsync(a => a.Profile == profile.Id && a.Version == gameVersion);
             var variant = await db.SvVariantPowers.SingleOrDefaultAsync(v => v.Profile == profile.Id && v.Version == gameVersion);
 
-            // Make generator power always 100% (asphyxia load L999-1002).
-            for (int i = 0; i < 50; i++)
-                items.Add(new SvItem { Type = 7, ItemId = (uint)i, Param = 10 });
-
             // Unlock navigators/appeal cards if configured (asphyxia unlockNavigators/unlockAppealCards).
+            // Order matches asphyxia load L993-1002: navigators -> appeal cards
+            // -> removeStampItems -> unlockAppealParts -> generator power (last).
             if (cfg.UnlockAllNavigators)
             {
                 for (int i = 0; i < 300; i++)
@@ -131,6 +129,11 @@ namespace StellaKFCPlugin.Handlers
                 for (int i = 0; i <= 50; i++) items.Add(new SvItem { Type = 23, ItemId = (uint)i, Param = 99 });
                 for (int i = 0; i <= 200; i++) items.Add(new SvItem { Type = 24, ItemId = (uint)i, Param = 99 });
             }
+
+            // Make generator power always 100% (asphyxia load L999-1002 — added LAST,
+            // after all unlock/stamp/appeal-parts processing, matching asphyxia order).
+            for (int i = 0; i < 50; i++)
+                items.Add(new SvItem { Type = 7, ItemId = (uint)i, Param = 10 });
 
             // bplSupport handling: >10 means pro (asphyxia L988-989).
             int bplSupport = profile.BplSupport;
@@ -171,7 +174,7 @@ namespace StellaKFCPlugin.Handlers
                 SkillBaseId = skill.Base,
                 SkillNameId = skill.Name,
                 SkillType = skill.Type,
-                SupportTeamId = (bplSupportDisp > 0 && !bplPro) ? bplSupportDisp : 0,
+                SupportTeamId = (bplSupportDisp > 0 && !bplPro) ? bplSupportDisp : null,
                 EaShop = new EaShop
                 {
                     PacketBooster = 1,
@@ -302,11 +305,54 @@ namespace StellaKFCPlugin.Handlers
 
             // Additional info — asphyxia pug always renders this element (pro_team_id
             // is conditional, but the additional_info wrapper is always present).
-            response.AdditionalInfo = bplPro && bplSupport > 0
-                ? new AdditionalInfoElement { ProTeamId = bplSupport.ToString() }
+            response.AdditionalInfo = (bplPro && bplSupportDisp > 0)
+                ? new AdditionalInfoElement { ProTeamId = bplSupportDisp.ToString() }
                 : new AdditionalInfoElement();
 
+            // Weekly music ranking (asphyxia load L953-968): for the current weekly
+            // music, look up the requester's rank across difficulties 0..4.
+            response.WeeklyMusic = BuildLoadWeeklyMusic(db, request.Refid, gameVersion, dVersion, DateTime.Now);
+
             return response;
+        }
+
+        // asphyxia load L953-968 + webui.ts getRankListDB: for the active weekly
+        // music, query weekly music scores for each difficulty (mtype 0..4), rank
+        // by exscore desc, and return the requester's entry per difficulty.
+        private List<LoadWeeklyMusic> BuildLoadWeeklyMusic(StellaKFCContext db, string refid, int gameVersion, int dVersion, DateTime date)
+        {
+            var list = new List<LoadWeeklyMusic>();
+            if (dVersion < 20241210) return list;
+            var nowMs = KfcVersion.UnixMs(date.ToUniversalTime());
+            var week = db.SvWeeklyMusics.AsEnumerable()
+                .FirstOrDefault(w => nowMs > w.Start && nowMs <= w.End);
+            if (week is null) return list;
+
+            for (int mtype = 0; mtype <= 4; mtype++)
+            {
+                var ranked = db.SvWeeklyMusicScores.AsEnumerable()
+                    .Where(s => s.Version == gameVersion && s.Week == week.WeekId &&
+                                s.Mid == week.MusicId && s.Mtype == mtype)
+                    .OrderByDescending(s => s.Exscore)
+                    .ToList();
+                if (ranked.Count == 0) continue;
+                int rank = 0;
+                for (int i = 0; i < ranked.Count; i++)
+                {
+                    if (ranked[i].RefId == refid) { rank = i + 1; break; }
+                }
+                if (rank == 0) continue;
+                var entry = ranked[rank - 1];
+                list.Add(new LoadWeeklyMusic
+                {
+                    WeekId = week.WeekId,
+                    MusicId = week.MusicId,
+                    MusicType = mtype,
+                    Exscore = (uint)entry.Exscore,
+                    Rank = rank,
+                });
+            }
+            return list;
         }
 
         private async Task<LoadMResponse> LoadMInternal(int gameVersion)

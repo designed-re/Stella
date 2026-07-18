@@ -382,6 +382,18 @@ namespace Stella
 
                 XDocument document = XDocument.Parse(sb.ToString());
 
+                // XmlSerializer renders null nullable VALUE types (int?, ulong?, etc.)
+                // as <foo xsi:nil="true" /> with xmlns:xsi/xsd namespace declarations.
+                // KBinXML has no namespace support and the ':' in the attribute name
+                // ("xsi:nil") corrupts the binary output. Strip these: remove elements
+                // marked xsi:nil (they represent null values that should be omitted) and
+                // drop all namespace-declaration attributes.
+                var xsiNs = (XNamespace)"http://www.w3.org/2001/XMLSchema-instance";
+                foreach (var nilEl in document.Descendants().Where(e => e.Attribute(xsiNs + "nil") != null).ToList())
+                    nilEl.Remove();
+                foreach (var attr in document.Descendants().SelectMany(e => e.Attributes()).Where(a => a.IsNamespaceDeclaration).ToList())
+                    attr.Remove();
+
                 // Add __type attributes to all elements based on the response type
                 if (res is IStellaMultiElementResponse multiTypes)
                 {
