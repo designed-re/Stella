@@ -377,13 +377,12 @@ namespace StellaKFCPlugin.Handlers
                     for (byte mt = 0; mt < 6; mt++)
                     {
                         if (difnum[mt] != 0)
-                            el.Infos.Add(new MusicLimitedInfo { MusicId = id, MusicType = mt, Limited = 3 });
-                    }
-                }
-                return el;
-            }
+                           el.Infos.Add(new MusicLimitedInfo { MusicId = id, MusicType = mt, Limited = 3 });
+                   }
+               }
+           }
 
-            // Per-song limited computation (asphyxia common.ts L160-262).
+           // Per-song limited computation (asphyxia common.ts L160-262).
             // difnum == 0 means the chart does not exist for this music_db, used
             // in place of asphyxia's per-version difficulty[absVersion][diff] != '0'.
             var diffsMap = MigrationHelper.GetMusicDifficulties();
@@ -433,10 +432,23 @@ namespace StellaKFCPlugin.Handlers
                 }
 
                 // Licensed songs released prior to current version (asphyxia L247-258).
-                if (song.Version > 0 && song.Version < absVersion && licensedSongs.Contains(i))
+               if (song.Version > 0 && song.Version < absVersion && licensedSongs.Contains(i))
+               {
+                   int licensedLimited = 3;
+                   AddLimitedCharts(el, diffsMap, i, (byte)licensedLimited);
+               }
+           }
+            // asphyxia common.ts L579-593: on April 1 the APRILFOOLSSONGS list is
+            // appended to songs AFTER the unlock/non-unlock block, so it appears in
+            // music_limited for both modes. Each April Fools song emits 5 entries
+            // (music_type 0..4, limited:3) with no difnum filter. The same exg
+            // APRILFOOLSSONGS list is used for sv6 and sv7.
+            if (gameVersion >= 6 && currentYmd % 10000 == 401)
+            {
+                foreach (var afsong in provider.GetAprilFoolsSongs())
                 {
-                    int licensedLimited = 3;
-                    AddLimitedCharts(el, diffsMap, i, (byte)licensedLimited);
+                    for (byte mt = 0; mt < 5; mt++)
+                        el.Infos.Add(new MusicLimitedInfo { MusicId = afsong, MusicType = mt, Limited = 3 });
                 }
             }
             return el;

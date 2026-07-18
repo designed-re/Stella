@@ -56,7 +56,11 @@ public static class KfcSeeder
         SeedLicensedSongs(db, 7, nbl?["LICENSED_SONGS7"] as JArray);
 
         SeedValkyrieSongs(db, 6, exg?["VALKYRIE_SONGS"] as JArray);
+        // asphyxia imports APRILFOOLSSONGS from data/exg.ts only and uses the
+        // same list for both sv6 and sv7 (common.ts runs for both via MultiRoute),
+        // so seed both versions from the exg array.
         SeedAprilFoolsSongs(db, 6, exg?["APRILFOOLSSONGS"] as JArray);
+        SeedAprilFoolsSongs(db, 7, exg?["APRILFOOLSSONGS"] as JArray);
 
         SeedCourses(db, 6, exg?["COURSES6"] as JArray);
         SeedCourses(db, 7, nbl?["COURSES7"] as JArray);
