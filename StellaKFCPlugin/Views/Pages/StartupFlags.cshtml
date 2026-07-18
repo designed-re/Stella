@@ -1,5 +1,5 @@
 @model object
-@{ var c = ((dynamic)Model).Config; }
+@{ var m = (dynamic)Model; var c = m.Config; }
 @Html.AntiForgeryToken()
 <form id="flags-form" class="rounded-xl bg-zinc-900/60 border border-zinc-800 p-6 max-w-2xl space-y-4">
     <p class="font-medium text-zinc-100 mb-2">Plugin toggles (saved to <code class="text-pink-300">plugin_kfc.json</code>)</p>
@@ -16,6 +16,22 @@
         <label class="block"><span class="text-sm text-zinc-400">ARENA session</span><input type="number" name="arena_session" value="@c.ArenaSession" class="mt-1 w-full px-3 py-2 rounded-md bg-zinc-950 border border-zinc-800 text-zinc-200" /></label>
         <label class="block"><span class="text-sm text-zinc-400">ARENA station</span><input type="text" name="arena_station" value="@c.ArenaStation" class="mt-1 w-full px-3 py-2 rounded-md bg-zinc-950 border border-zinc-800 text-zinc-200" /></label>
     </div>
+
+    @if (m.StartupFlags.Count > 0)
+    {
+        <hr class="border-zinc-800 my-4" />
+        <p class="font-medium text-zinc-100 mb-2">Event flags (asphyxia <code class="text-pink-300">flags.json</code> toggles)</p>
+        <div class="space-y-3">
+            @foreach (var sf in m.StartupFlags)
+            {
+                <label class="flex items-center justify-between gap-4 px-3 py-2 rounded-md bg-zinc-950/60 border border-zinc-800">
+                    <span class="text-sm text-zinc-300">@sf.DisplayName</span>
+                    <input type="checkbox" name="flag_@sf.FlagId" value="true" @(sf.Enabled ? "checked" : "") class="h-4 w-4 accent-pink-500" />
+                </label>
+            }
+        </div>
+    }
+
     <button type="submit" class="px-4 py-2 rounded-md bg-pink-500 hover:bg-pink-400 text-zinc-950 font-medium">Apply</button>
     <p id="flags-msg" class="text-sm text-zinc-400"></p>
 </form>

@@ -45,6 +45,7 @@ RUN mkdir -p /app/plugins \
 RUN mkdir -p /app/Data/Seed \
   && cp /src/StellaKFCPlugin/Data/Seed/asphyxia_data.json /app/Data/Seed/ \
   && cp /src/StellaKFCPlugin/Data/Seed/events_list.json /app/Data/Seed/ \
+  && cp /src/StellaKFCPlugin/Data/Seed/startup_flags.json /app/Data/Seed/ \
   && (cp /src/StellaKFCPlugin/Data/Seed/music_db.xml /app/Data/Seed/ 2>/dev/null || true)
 
 # ---- runtime ----

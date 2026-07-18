@@ -102,6 +102,11 @@ namespace StellaKFCPlugin.Handlers
                var response = new GetCommonResponse { Status = "0" };
 
                // --- Events ---
+               // Startup flag event strings (asphyxia common.ts L57-77 / L85-99:
+               // flags.json [id].toggle → push [id].str to events). Added before
+               // date-based events so the order matches asphyxia (EVENT6/7 base,
+               // then flags.json toggles, then date events, then event-extend flags).
+               AddStartupFlagEvents(db, events);
                AddDateEvents(events, currentDate, gameVersion, provider);
                 // Event extends (asphyxia common.ts L386-485): stamp/completestamp/
                 // tama/variant extends + achmissions event flags, driven by the
@@ -338,6 +343,16 @@ namespace StellaKFCPlugin.Handlers
         // (asphyxia webui/asset/config/events.json) + the SvUnlockEventData
         // payload (asphyxia UNLOCK_EVENTS6/7). Only events the user toggled on
         // (SvEventList.Enabled) and that satisfy checkVerStart emit extends.
+        private static void AddStartupFlagEvents(StellaKFCContext db, List<string> events)
+        {
+            foreach (var flag in db.SvStartupFlags.Where(f => f.Enabled))
+            {
+                var strings = JArray.Parse(string.IsNullOrEmpty(flag.EventStringsJson) ? "[]" : flag.EventStringsJson);
+                foreach (var str in strings)
+                    events.Add(str.ToString());
+            }
+        }
+
         private void AddEventExtends(List<ExtendInfoRaw> extend, List<string> events,
             IDataProvider provider, int gameVersion, int dVersion, DateTime date)
         {

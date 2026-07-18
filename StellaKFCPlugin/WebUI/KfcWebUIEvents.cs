@@ -67,6 +67,17 @@ public static class KfcWebUIEvents
         if (data.TryGetProperty("gw_mission", out var g1)) cfg.GwMission = g1.GetBoolean();
         if (data.TryGetProperty("gw_gene", out var g2)) cfg.GwGene = g2.GetBoolean();
         await WriteConfigAsync(cfg);
+
+        // Event flag toggles (keys prefixed with "flag_") — asphyxia flags.json.
+        using (var db = new StellaKFCContext())
+        {
+            foreach (var flag in db.SvStartupFlags)
+            {
+                var key = "flag_" + flag.FlagId;
+                flag.Enabled = data.TryGetProperty(key, out var fv) && fv.GetBoolean();
+            }
+            await db.SaveChangesAsync();
+        }
         return WebUIResult.JsonFrom(new { ok = true });
     }
 

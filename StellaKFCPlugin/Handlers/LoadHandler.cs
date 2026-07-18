@@ -463,7 +463,7 @@ namespace StellaKFCPlugin.Handlers
             // April-Fools yukkuri presents (asphyxia load L888-907).
             if (dVersion >= 20250324)
             {
-                bool aprilyukkuri = false; // asphyxia flags.json aprilyukkuri toggle (not modelled in Stella)
+                bool aprilyukkuri = db.SvStartupFlags.FirstOrDefault(f => f.FlagId == "aprilyukkuri")?.Enabled ?? false;
                 bool april1 = date.ToString("M/d/yyyy", System.Globalization.CultureInfo.InvariantCulture).StartsWith("4/1/");
                 if (aprilyukkuri || april1)
                 {

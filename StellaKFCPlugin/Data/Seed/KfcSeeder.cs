@@ -101,6 +101,9 @@ public static class KfcSeeder
         // EVENT_ITEMS6/7 reward lists come from the asphyxia_data.json root.
         SeedEventList(db, root);
 
+        // Startup flags (asphyxia events.json `flags` array → flags.json toggles).
+        SeedStartupFlags(db);
+
         // GRAVITY WARS (sv3) data
         if (gw != null)
         {
@@ -590,5 +593,40 @@ public static class KfcSeeder
         if (tok is null) return 0;
         if (tok.Type == JTokenType.Array) return tok.First?.Value<int>() ?? 0;
         return tok.Value<int>();
+    }
+
+    private static void SeedStartupFlags(StellaKFCContext db)
+    {
+        var path = Path.Combine(Directory.GetCurrentDirectory(), "Data", "Seed", "startup_flags.json");
+        if (!File.Exists(path))
+            path = Path.Combine(AppContext.BaseDirectory, "Data", "Seed", "startup_flags.json");
+        if (!File.Exists(path))
+        {
+            Console.WriteLine("[KfcSeeder] startup_flags.json not found; skipping startup flag seed.");
+            return;
+        }
+
+        var arr = JArray.Parse(File.ReadAllText(path));
+        foreach (var item in arr)
+        {
+            var flagId = item["flagId"]!.ToString();
+            var existing = db.SvStartupFlags.FirstOrDefault(x => x.FlagId == flagId);
+            var eventStrings = (item["eventStrings"] as JArray ?? new JArray()).ToString(Formatting.None);
+            if (existing is null)
+            {
+                db.SvStartupFlags.Add(new SvStartupFlag
+                {
+                    FlagId = flagId,
+                    DisplayName = item["displayName"]?.ToString() ?? flagId,
+                    EventStringsJson = eventStrings,
+                    Enabled = false,
+                });
+            }
+            else
+            {
+                existing.DisplayName = item["displayName"]?.ToString() ?? existing.DisplayName;
+                existing.EventStringsJson = eventStrings;
+            }
+        }
     }
 }

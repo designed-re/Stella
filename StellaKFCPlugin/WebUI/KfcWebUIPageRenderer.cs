@@ -96,7 +96,9 @@ public sealed class KfcWebUIPageRenderer
         var cfg = new StellaKFCPluginConfig();
         if (File.Exists(path))
             cfg = JsonSerializer.Deserialize<StellaKFCPluginConfig>(File.ReadAllText(path), JsonOpts) ?? cfg;
-        return await RenderInternal(r, "StartupFlags.cshtml", new ViewModels.StartupFlagsModel { Config = cfg });
+        using var db = new StellaKFCContext();
+        var flags = db.SvStartupFlags.OrderBy(f => f.Id).Select(f => new ViewModels.StartupFlagsModel.StartupFlagRow(f.FlagId, f.DisplayName, f.Enabled)).ToList();
+        return await RenderInternal(r, "StartupFlags.cshtml", new ViewModels.StartupFlagsModel { Config = cfg, StartupFlags = flags });
     }
 
     private async Task<string?> RenderUnlockEvents(IPluginViewRenderer r)

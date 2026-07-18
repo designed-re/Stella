@@ -21,6 +21,8 @@ public sealed class SongsListModel
 public sealed class StartupFlagsModel
 {
     public StellaKFCPluginConfig Config { get; set; } = new();
+    public IReadOnlyList<StartupFlagRow> StartupFlags { get; set; } = Array.Empty<StartupFlagRow>();
+    public sealed record StartupFlagRow(string FlagId, string DisplayName, bool Enabled);
 }
 
 public sealed class UnlockEventsModel

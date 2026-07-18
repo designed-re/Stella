@@ -83,6 +83,8 @@ namespace StellaKFCPlugin.EF
         public virtual DbSet<StaticData.SvWeeklyMusic> SvWeeklyMusics { get; set; }
 
         public virtual DbSet<StaticData.SvHaveNote> SvHaveNotes { get; set; }
+
+        public virtual DbSet<StaticData.SvStartupFlag> SvStartupFlags { get; set; }
         private static string? _cachedConnectionString;
         private static MariaDbServerVersion? _cachedServerVersion;
         private static readonly object _configLock = new();
@@ -1149,6 +1151,16 @@ namespace StellaKFCPlugin.EF
                 entity.Property(e => e.Id).HasColumnType("int(11)").HasColumnName("id");
                 entity.Property(e => e.NoteId).HasColumnType("int(11)").HasColumnName("note_id");
                 entity.Property(e => e.Param).HasColumnType("int(11)").HasColumnName("param");
+            });
+
+            builder.Entity<StaticData.SvStartupFlag>(entity =>
+            {
+                entity.ToTable("sv_startup_flag");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.FlagId).HasMaxLength(64).IsRequired();
+                entity.Property(e => e.DisplayName).HasMaxLength(128).IsRequired();
+                entity.Property(e => e.EventStringsJson).IsRequired();
+                entity.HasIndex(e => e.FlagId).IsUnique();
             });
         }
         /// <summary>

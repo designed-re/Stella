@@ -39,6 +39,9 @@
     <Content Include="Data/Seed/events_list.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="Data/Seed/startup_flags.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 		<ItemGroup>
@@ -49,6 +52,7 @@
 		<ItemGroup>
 			<SeedFiles Include="$(TargetDir)Data/Seed/asphyxia_data.json" />
 			<SeedFiles Include="$(TargetDir)Data/Seed/events_list.json" />
+			<SeedFiles Include="$(TargetDir)Data/Seed/startup_flags.json" />
 		</ItemGroup>
 		<Copy SourceFiles="@(SeedFiles)" DestinationFolder="$(SolutionDir)Stella/bin/Debug/net10.0/Data/Seed/" SkipUnchangedFiles="true" />
 	</Target>
