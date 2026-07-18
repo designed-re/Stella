@@ -24,8 +24,10 @@ namespace CorePlugin.Models
         [XmlAttribute(AttributeName = "status")]
         public string Status { get; set; }
 
+        // asphyxia facility.get does NOT emit an expire attribute; nullable so
+        // XmlSerializer omits it when the handler leaves it unset.
         [XmlAttribute(AttributeName = "expire")]
-        public int Expire { get; set; }
+        public int? Expire { get; set; }
     }
 
     [XmlRoot(ElementName = "location")]
