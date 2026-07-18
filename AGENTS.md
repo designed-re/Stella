@@ -257,6 +257,16 @@ asphyxia pug uses `if` guards (e.g. `if playCount`, `if arena`, `if variant`). I
 - **`additional_info`**: asphyxia always renders the wrapper element (inner `pro_team_id` is conditional). Stella must always emit `additional_info`.
 - **`arena`, `valgene_ticket`, `creator_item`**: asphyxia conditionally renders these. Stella uses nullable (`?`) types — `XmlSerializer` omits null elements, matching asphyxia's `if` guard.
 
+### Parity audit findings (webui ← parity-audit branch)
+
+These bugs were found by diffing Stella against `/home/user/core` and `/home/user/kfc` and fixed — do not regress them:
+
+- **`load` response has NO `blaster_count`** for sv6/sv7. asphyxia `load.pug` (v>=6) emits `blaster_energy` but not `blaster_count` (blaster_count only appears in the v2 section). `LoadResponse.cs` must not declare `blaster_count`.
+- **`valgene_ticket` is conditional** (asphyxia `if valgeneTicket`). `LoadResponse.ValgeneTicket` is `ValgeneTicket?` (nullable) and only assigned when a `sv_valgene_tickets` row exists — do NOT default it to `new()`.
+- **`unlock_all_songs` `music_limited` filter**: asphyxia `common.ts` L142-156 emits `(music_id, music_type, limited:3)` only for songs that exist in `music_db` AND whose chart difficulty for the version is non-zero. Stella's `music_db.xml` has a single `<difnum>` per difficulty (not per-version); `BuildMusicLimited` uses `MigrationHelper.GetMusicDifficulties()` (cached) and skips ids absent from `sv_music` and charts whose `difnum == 0`. Do NOT revert to "all ids × all 6 charts".
+- **Core `expire` attribute values must match asphyxia**: `message.get` → 300, `package.list` → 1200, `pcbtracker.alive` → 1200 (Stella previously hard-coded 600 for all three).
+- **`cardmng.getrefid` for an existing card** must return that card's `dataid`/`refid` (asphyxia updates the pin and returns the existing refid). Returning an empty response breaks returning card users. `CorePlugin/Handlers/CardHandler.cs` `GetRefId` returns `DataId = RefId = existing.RefId`.
+
 ### Fields NOT in asphyxia responses
 
 Do NOT add fields that asphyxia doesn't send. The game's parser may reject unknown elements. For example, `extrack_energy` was in an early Stella `LoadResponse` but is NOT in the asphyxia pug — it was removed to match.

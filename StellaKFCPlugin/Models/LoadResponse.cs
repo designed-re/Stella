@@ -50,9 +50,6 @@ namespace StellaKFCPlugin.Models
         [XmlElement(ElementName = "blaster_energy")]
         public uint BlasterEnergy { get; set; }
 
-        [XmlElement(ElementName = "blaster_count")]
-        public uint BlasterCount { get; set; }
-
         [XmlElement(ElementName = "hispeed")]
         public int Hispeed { get; set; }
 
@@ -162,7 +159,7 @@ namespace StellaKFCPlugin.Models
         public LoadArenaElement? Arena { get; set; }
 
         [XmlElement(ElementName = "valgene_ticket")]
-        public ValgeneTicket ValgeneTicket { get; set; } = new();
+        public ValgeneTicket? ValgeneTicket { get; set; }
 
         [XmlElement(ElementName = "creator_item")]
         public CreatorItemElement? CreatorItem { get; set; }

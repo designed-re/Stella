@@ -150,7 +150,6 @@ namespace StellaKFCPlugin.Handlers
                 SortType = profile.SortType,
                 Headphone = profile.Headphone,
                 BlasterEnergy = profile.BlasterEnergy,
-                BlasterCount = profile.BlasterCount,
                 Hispeed = profile.Hispeed,
                 Lanespeed = profile.Lanespeed,
                 GaugeOption = profile.GaugeOption,
@@ -185,7 +184,6 @@ namespace StellaKFCPlugin.Handlers
                 WeekPlayCount = profile.WeekPlayCount,
                 WeekChain = profile.WeekChain,
                 MaxWeekChain = profile.MaxWeekChain,
-                ValgeneTicket = new ValgeneTicket(),
             };
 
             // Skill courses (asphyxia pug L122-133).
@@ -228,11 +226,14 @@ namespace StellaKFCPlugin.Handlers
                 response.Param.Infos.Add(new ParamInfo { Type = 6, Id = id, Param = new List<int> { profile.Akaname } });
             }
 
-            // Valgene ticket.
+            // Valgene ticket — asphyxia pug `if valgeneTicket` (omit when none).
             if (valgeneTicket is not null)
             {
-                response.ValgeneTicket.TicketNum = valgeneTicket.TicketNum;
-                response.ValgeneTicket.LimitDate = valgeneTicket.LimitDate;
+                response.ValgeneTicket = new ValgeneTicket
+                {
+                    TicketNum = valgeneTicket.TicketNum,
+                    LimitDate = valgeneTicket.LimitDate,
+                };
             }
 
             // Arena (asphyxia pug L182-191).

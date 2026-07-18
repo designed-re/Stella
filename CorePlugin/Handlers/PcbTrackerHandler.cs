@@ -10,7 +10,7 @@ namespace CorePlugin.Handlers
         {
             return new GetPcbTrackerResponse()
             {
-                Expire = 600,
+                Expire = 1200,
                 ECEnable = true,
                 ECLimit = 0,
                 Limit = 0,

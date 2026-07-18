@@ -241,6 +241,26 @@ public static class MigrationHelper
     /// maximum, ultimate]. Mirrors asphyxia's <c>difficulty[6][diffName]</c>
     /// lookup used by <c>viiMigrate</c>.
     /// </summary>
+    private static Dictionary<int, double[]>? _difficultyCache;
+    private static readonly object _difficultyLock = new();
+
+    /// <summary>
+    /// Cached map of music id -> difficulty levels [novice, advanced, exhaust,
+    /// infinite, maximum, ultimate] parsed from <c>music_db.xml</c>. A difnum
+    /// of 0 means the chart does not exist (mirrors asphyxia
+    /// <c>difficulty[absVersion][diffName] != '0'</c>). Used by
+    /// <c>viiMigrate</c> and <c>BuildMusicLimited</c> (unlock_all_songs).
+    /// </summary>
+    public static Dictionary<int, double[]> GetMusicDifficulties()
+    {
+        lock (_difficultyLock)
+        {
+            if (_difficultyCache is not null) return _difficultyCache;
+            _difficultyCache = LoadMusicDifficulties();
+            return _difficultyCache;
+        }
+    }
+
     private static Dictionary<int, double[]> LoadMusicDifficulties()
     {
         var result = new Dictionary<int, double[]>();

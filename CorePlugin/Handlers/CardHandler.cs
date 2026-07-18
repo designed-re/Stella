@@ -78,10 +78,14 @@ namespace CorePlugin.Handlers
             string cardId = request.CardId.ToUpper();
             string passwd = request.Passwd;
 
-            // Check if card already exists
-            if (context.Cards.Any(c => c.CardId == cardId))
+            // Card already exists — asphyxia updates the pin and re-binds, then
+            // returns the existing refid/dataid (profiles.ts cardmng.getrefid).
+            var existing = context.Cards.FirstOrDefault(c => c.CardId == cardId);
+            if (existing is not null)
             {
-                return new CardGetRefIdResponse();
+                existing.PassCode = passwd;
+                await context.SaveChangesAsync();
+                return new CardGetRefIdResponse { DataId = existing.RefId, RefId = existing.RefId };
             }
 
             // Generate random RefId and DataId (same value)

@@ -361,10 +361,23 @@ namespace StellaKFCPlugin.Handlers
 
             if (cfg.UnlockAllSongs)
             {
-                int max = await db.SvMusics.AnyAsync() ? await db.SvMusics.MaxAsync(m => m.Id) : songNum;
-                for (int i = 1; i <= max; i++)
+                // asphyxia common.ts L142-156: for each id that EXISTS in music_db,
+                // emit (music_id, music_type, limited:3) only for charts whose
+                // difficulty for the version is non-zero. Stella's music_db.xml has a
+                // single <difnum> per difficulty (not per-version); difnum == 0 means
+                // the chart does not exist, so we filter on that — the closest
+                // equivalent to asphyxia's difficulty[absVersion][diffName] != '0'.
+                var diffs = MigrationHelper.GetMusicDifficulties();
+                var musicIds = await db.SvMusics.Select(m => m.Id).ToListAsync();
+                foreach (var id in musicIds)
+                {
+                    if (!diffs.TryGetValue(id, out var difnum)) continue;
                     for (byte mt = 0; mt < 6; mt++)
-                        el.Infos.Add(new MusicLimitedInfo { MusicId = i, MusicType = mt, Limited = 3 });
+                    {
+                        if (difnum[mt] != 0)
+                            el.Infos.Add(new MusicLimitedInfo { MusicId = id, MusicType = mt, Limited = 3 });
+                    }
+                }
                 return el;
             }
 
