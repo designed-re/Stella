@@ -495,32 +495,17 @@ namespace StellaKFCPlugin.Handlers
         {
             var el = new MusicLimitedElement();
             int songNum = provider.GetSongNum();
-            var diffNames = new[] { "novice", "advanced", "exhaust", "infinite", "maximum", "ultimate" };
 
+            // asphyxia common.ts L287: music_limited.info = unlock_all_songs ? [] : songs.
+            // When unlock_all_songs is ON, asphyxia sends an EMPTY music_limited
+            // (the `songs` array built in the unlock block is discarded). The game
+            // shows all songs without needing limited entries.
             if (cfg.UnlockAllSongs)
-            {
-                // asphyxia common.ts L142-156: for each id that EXISTS in music_db,
-                // emit (music_id, music_type, limited:3) only for charts whose
-                // difficulty for the version is non-zero. Stella's music_db.xml has a
-                // single <difnum> per difficulty (not per-version); difnum == 0 means
-                // the chart does not exist, so we filter on that — the closest
-                // equivalent to asphyxia's difficulty[absVersion][diffName] != '0'.
-                var diffs = MigrationHelper.GetMusicDifficulties();
-                var musicIds = await db.SvMusics.Select(m => m.Id).ToListAsync();
-                foreach (var id in musicIds)
-                {
-                    if (!diffs.TryGetValue(id, out var difnum)) continue;
-                    for (byte mt = 0; mt < 6; mt++)
-                    {
-                        if (difnum[mt] != 0)
-                           el.Infos.Add(new MusicLimitedInfo { MusicId = id, MusicType = mt, Limited = 3 });
-                   }
-               }
-           }
+                return el;
 
-           // Per-song limited computation (asphyxia common.ts L160-262).
-            // difnum == 0 means the chart does not exist for this music_db, used
-            // in place of asphyxia's per-version difficulty[absVersion][diff] != '0'.
+            // Non-unlock path (asphyxia common.ts L160-262). difnum == 0 means the
+            // chart does not exist for this music_db, used in place of asphyxia's
+            // per-version difficulty[absVersion][diff] != '0'.
             var diffsMap = MigrationHelper.GetMusicDifficulties();
             var musics = await db.SvMusics.ToDictionaryAsync(m => m.Id);
             int lastId = musics.Count > 0 ? musics.Keys.Max() : songNum;
@@ -574,11 +559,10 @@ namespace StellaKFCPlugin.Handlers
                    AddLimitedCharts(el, diffsMap, i, (byte)licensedLimited);
                }
            }
-            // asphyxia common.ts L579-593: on April 1 the APRILFOOLSSONGS list is
-            // appended to songs AFTER the unlock/non-unlock block, so it appears in
-            // music_limited for both modes. Each April Fools song emits 5 entries
-            // (music_type 0..4, limited:3) with no difnum filter. The same exg
-            // APRILFOOLSSONGS list is used for sv6 and sv7.
+            // asphyxia common.ts L579-593 + L287: April Fools songs are appended to
+            // `songs` before the L287 check, so they only appear in music_limited
+            // when unlock_all_songs is OFF (music_limited = songs). Each April Fools
+            // song emits 5 entries (music_type 0..4, limited:3) with no difnum filter.
             if (gameVersion >= 6 && currentYmd % 10000 == 401)
             {
                 foreach (var afsong in provider.GetAprilFoolsSongs())
