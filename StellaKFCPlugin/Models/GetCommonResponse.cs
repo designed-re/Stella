@@ -232,14 +232,14 @@ namespace StellaKFCPlugin.Models
         [XmlElement(ElementName = "valgene_id")]
         public int ValgeneId { get; set; }
 
+        [XmlElement(ElementName = "rarity")]
+        public int Rarity { get; set; }
+
         [XmlElement(ElementName = "item_type")]
         public int ItemType { get; set; }
 
         [XmlElement(ElementName = "item_id")]
         public int ItemId { get; set; }
-
-        [XmlElement(ElementName = "rarity")]
-        public int Rarity { get; set; }
     }
 
     [XmlRoot(ElementName = "skill_course")]

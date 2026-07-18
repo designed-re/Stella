@@ -164,8 +164,11 @@ namespace StellaKFCPlugin.Models
         [XmlElement(ElementName = "creator_item")]
         public CreatorItemElement? CreatorItem { get; set; }
 
+        // asphyxia only renders variant_gate when dVersion >= 20250422
+        // (initialising to zeros) or when a variantpower record already exists.
+        // Nullable so XmlSerializer omits it for older datecodes with no record.
         [XmlElement(ElementName = "variant_gate")]
-        public VariantGateElement VariantGate { get; set; } = new();
+        public VariantGateElement? VariantGate { get; set; }
     }
 
     [XmlRoot(ElementName = "present")]

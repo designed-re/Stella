@@ -264,33 +264,32 @@ namespace StellaKFCPlugin.Handlers
                 };
             }
 
-            // Variant gate — asphyxia initializes to zeros if no DB record exists,
-            // and always renders the variant_gate element (pug `if variant` is true
-            // because the default object is truthy).
-            // Variant gate — asphyxia initializes to zeros if no DB record exists,
-            // and always renders the variant_gate element. over_radar is always
-            // present (asphyxia __count=0 for empty). We ensure at least one element
-            // so XmlSerializer emits the node; XDocumentTypeExtensions adds __count.
-            var overRadarList = new OverRadarList();
-            if (variant != null && !string.IsNullOrEmpty(variant.OverRadar))
+            // Variant gate — asphyxia (profiles.ts L953-964) only initialises a
+            // zero-filled variant object when dVersion >= 20250422; before that
+            // datecode a missing record means variant_gate is omitted (pug `if variant`).
+            if (dVersion >= 20250422 || variant != null)
             {
-                foreach (var v in variant.OverRadar.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-                    overRadarList.Add(int.Parse(v));
-            }
-            response.VariantGate = new VariantGateElement
-            {
-                Power = variant?.Power ?? 0,
-                OverRadar = overRadarList,
-                Element = new VariantElement
+                var overRadarList = new OverRadarList();
+                if (variant != null && !string.IsNullOrEmpty(variant.OverRadar))
                 {
-                    Notes = variant?.Notes ?? 0,
-                    Peak = variant?.Peak ?? 0,
-                    Tsumami = variant?.Tsumami ?? 0,
-                    Tricky = variant?.Tricky ?? 0,
-                    Onehand = variant?.Onehand ?? 0,
-                    Handtrip = variant?.Handtrip ?? 0,
-                },
-            };
+                    foreach (var v in variant.OverRadar.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                        overRadarList.Add(int.Parse(v));
+                }
+                response.VariantGate = new VariantGateElement
+                {
+                    Power = variant?.Power ?? 0,
+                    OverRadar = overRadarList,
+                    Element = new VariantElement
+                    {
+                        Notes = variant?.Notes ?? 0,
+                        Peak = variant?.Peak ?? 0,
+                        Tsumami = variant?.Tsumami ?? 0,
+                        Tricky = variant?.Tricky ?? 0,
+                        Onehand = variant?.Onehand ?? 0,
+                        Handtrip = variant?.Handtrip ?? 0,
+                    },
+                };
+            }
 
             // Creator item (asphyxia pug L198-203).
             if (creatorItem > 1)
