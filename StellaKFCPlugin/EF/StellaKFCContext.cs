@@ -201,6 +201,14 @@ namespace StellaKFCPlugin.EF
                     .HasColumnType("int(11)")
                     .HasColumnName("version")
                     .HasDefaultValue(6);
+                entity.Property(e => e.InfVer)
+                    .HasColumnType("int(11)")
+                    .HasColumnName("inf_ver")
+                    .HasDefaultValue(0);
+                entity.Property(e => e.DistributionDate)
+                    .HasColumnType("int(11)")
+                    .HasColumnName("distribution_date")
+                    .HasDefaultValue(0);
             });
 
             builder.Entity<SvParam>(entity =>

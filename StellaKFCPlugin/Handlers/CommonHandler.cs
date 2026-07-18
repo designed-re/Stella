@@ -382,49 +382,76 @@ namespace StellaKFCPlugin.Handlers
             }
 
             // Per-song limited computation (asphyxia common.ts L160-262).
+            // difnum == 0 means the chart does not exist for this music_db, used
+            // in place of asphyxia's per-version difficulty[absVersion][diff] != '0'.
+            var diffsMap = MigrationHelper.GetMusicDifficulties();
             var musics = await db.SvMusics.ToDictionaryAsync(m => m.Id);
             int lastId = musics.Count > 0 ? musics.Keys.Max() : songNum;
             var egMerge = egSongsLocked.SelectMany(c => c.MusicIds).ToArray();
+            var valkyrieSongs = provider.GetValkyrieSongs();
+            bool isGh = Regex.IsMatch(cabType, @"^(G|H)$");
 
             for (int i = 0; i <= lastId; i++)
             {
                 if (!musics.TryGetValue(i, out var song)) continue;
                 int absVersion = gameVersion;
+                // Skip unreleased songs (asphyxia L185/L225): info.version <=
+                // absVersion AND distribution_date in the future.
+                if (song.Version <= absVersion && song.DistributionDate > 0 && song.DistributionDate > currentYmd)
+                    continue;
+
+                int limitedNo = 2;
 
                 if (absVersion == 6)
                 {
-                    int limitedNo = 2;
-                    if (licensedSongs.Contains(i)) limitedNo += 1;
-                    else if (provider.GetValkyrieSongs().Contains(i) && !Regex.IsMatch(cabType, @"^(G|H)$")) limitedNo -= 1;
-                    if (i == 2034) limitedNo = 2;
-                    for (byte mt = 0; mt < 6; mt++)
-                        el.Infos.Add(new MusicLimitedInfo { MusicId = i, MusicType = mt, Limited = (byte)limitedNo });
+                    if (song.Version == 6)
+                    {
+                        if (licensedSongs.Contains(i)) limitedNo += 1;
+                        else if (valkyrieSongs.Contains(i) && !isGh) limitedNo -= 1;
+                        if (i == 2034) limitedNo = 2;
+                        AddLimitedCharts(el, diffsMap, i, (byte)limitedNo);
+                    }
+                    else if (song.InfVer == 6)
+                    {
+                        // XCD (INFINITE) track — only music_type 3 (asphyxia L206-213).
+                        if (i == 469) limitedNo = 2;
+                        if (ChartExists(diffsMap, i, 3))
+                            el.Infos.Add(new MusicLimitedInfo { MusicId = i, MusicType = 3, Limited = (byte)limitedNo });
+                    }
                 }
                 else if (absVersion == 7)
                 {
                     // NABLA: songs released in NABLA (info.version === '7') OR in
                     // EGSONGS_LOCKED crossresonance (asphyxia common.ts L226-240).
-                    // The `song.Version == 7` condition was previously missing, which
-                    // dropped every NABLA-original song from music_limited in
-                    // non-unlock mode.
                     if (song.Version == 7 || egMerge.Contains(i))
                     {
-                        int limitedNo = 2;
                         if (licensedSongs.Contains(i)) limitedNo += 1;
-                        for (byte mt = 0; mt < 6; mt++)
-                            el.Infos.Add(new MusicLimitedInfo { MusicId = i, MusicType = mt, Limited = (byte)limitedNo });
+                        AddLimitedCharts(el, diffsMap, i, (byte)limitedNo);
                     }
                 }
 
-                // Licensed songs released prior to current version.
+                // Licensed songs released prior to current version (asphyxia L247-258).
                 if (song.Version > 0 && song.Version < absVersion && licensedSongs.Contains(i))
                 {
-                    int limitedNo = 3;
-                    for (byte mt = 0; mt < 6; mt++)
-                        el.Infos.Add(new MusicLimitedInfo { MusicId = i, MusicType = mt, Limited = (byte)limitedNo });
+                    int licensedLimited = 3;
+                    AddLimitedCharts(el, diffsMap, i, (byte)licensedLimited);
                 }
             }
             return el;
+        }
+
+        private static void AddLimitedCharts(MusicLimitedElement el, Dictionary<int, double[]> diffs, int id, byte limited)
+        {
+            if (!diffs.TryGetValue(id, out var difnum)) return;
+            for (byte mt = 0; mt < 6; mt++)
+                if (difnum[mt] != 0)
+                    el.Infos.Add(new MusicLimitedInfo { MusicId = id, MusicType = mt, Limited = limited });
+        }
+
+        private static bool ChartExists(Dictionary<int, double[]> diffs, int id, int mt)
+        {
+            if (!diffs.TryGetValue(id, out var difnum)) return false;
+            return mt >= 0 && mt < difnum.Length && difnum[mt] != 0;
         }
 
         private List<WeeklyMusicInfo> BuildWeeklyMusic(StellaKFCContext db, int dVersion, DateTime date)

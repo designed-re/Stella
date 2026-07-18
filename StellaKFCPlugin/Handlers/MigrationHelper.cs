@@ -66,8 +66,9 @@ public static class MigrationHelper
         // Encoding.GetEncoding("shift_jis") works on .NET 10.
         System.Text.Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         var enc = System.Text.Encoding.GetEncoding("shift_jis");
-        var existingIds = db.SvMusics.Select(m => m.Id).ToHashSet();
+        var existing = db.SvMusics.ToDictionary(m => m.Id);
         var toAdd = new List<SvMusic>();
+        var toUpdate = new List<SvMusic>();
 
         var settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Ignore };
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read);
@@ -82,11 +83,17 @@ public static class MigrationHelper
         {
             if (xmlReader.NodeType != XmlNodeType.Element || xmlReader.Name != "music") continue;
             int id = int.Parse(xmlReader.GetAttribute("id")!, CultureInfo.InvariantCulture);
-            if (existingIds.Contains(id)) continue;
+            existing.TryGetValue(id, out var row);
+            bool isNew = row is null;
+            var music = row ?? new SvMusic { Id = id };
+            // Capture old values BEFORE overwriting (row and music are the same
+            // reference for existing rows, so compare against these snapshots).
+            int oldInfVer = row?.InfVer ?? -1;
+            int oldDistDate = row?.DistributionDate ?? -1;
+            int oldVersion = row?.Version ?? -1;
 
             // Read subtree: info + difficulty
             using var sub = xmlReader.ReadSubtree();
-            var music = new SvMusic { Id = id };
             while (sub.Read())
             {
                 if (sub.NodeType != XmlNodeType.Element) continue;
@@ -95,8 +102,14 @@ public static class MigrationHelper
                 else if (sub.Name == "artist_name") music.Artist = sub.ReadElementContentAsString();
                 else if (sub.Name == "artist_yomigana") music.ArtistYomigana = sub.ReadElementContentAsString();
                 else if (sub.Name == "version") music.Version = int.Parse(sub.ReadElementContentAsString(), CultureInfo.InvariantCulture);
+                else if (sub.Name == "inf_ver") music.InfVer = int.Parse(sub.ReadElementContentAsString(), CultureInfo.InvariantCulture);
+                else if (sub.Name == "distribution_date") music.DistributionDate = int.Parse(sub.ReadElementContentAsString(), CultureInfo.InvariantCulture);
             }
-            toAdd.Add(music);
+            // Backfill inf_ver/distribution_date on existing rows when missing
+            // (added after the initial sv_music schema), and refresh version.
+            if (isNew) toAdd.Add(music);
+            else if (music.InfVer != oldInfVer || music.DistributionDate != oldDistDate || music.Version != oldVersion)
+                toUpdate.Add(music);
             count++;
             if (toAdd.Count >= 500)
             {
@@ -104,13 +117,24 @@ public static class MigrationHelper
                 await db.SaveChangesAsync();
                 toAdd.Clear();
             }
+            if (toUpdate.Count >= 500)
+            {
+                db.SvMusics.UpdateRange(toUpdate);
+                await db.SaveChangesAsync();
+                toUpdate.Clear();
+            }
         }
         if (toAdd.Count > 0)
         {
             db.SvMusics.AddRange(toAdd);
             await db.SaveChangesAsync();
         }
-        logger?.LogInformation("[MigrationHelper] Loaded {Count} music entries.", count);
+        if (toUpdate.Count > 0)
+        {
+            db.SvMusics.UpdateRange(toUpdate);
+            await db.SaveChangesAsync();
+        }
+        logger?.LogInformation("[MigrationHelper] Loaded {Count} music entries ({Upd} updated).", count, toUpdate.Count);
     }
 
     /// <summary>
