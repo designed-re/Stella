@@ -95,6 +95,11 @@ public static class KfcSeeder
         SeedUnlockEvents(db, 6, exg?["UNLOCK_EVENTS6"] as JObject);
         SeedUnlockEvents(db, 7, nbl?["UNLOCK_EVENTS7"] as JObject);
 
+        // Event list (asphyxia webui/asset/json/events.json) — the per-version
+        // catalog of events the WebUI can toggle. Loaded from a separate file so
+        // the big asphyxia_data.json blob is not rewritten on every change.
+        SeedEventList(db);
+
         // GRAVITY WARS (sv3) data
         if (gw != null)
         {
@@ -468,6 +473,19 @@ public static class KfcSeeder
     {
         if (obj == null) return;
         var existing = db.SvUnlockEventDatas.Where(e => e.Version == version).Select(e => e.EventId).ToHashSet();
+        // refillStamps is a sibling map (stmpid -> bonus) used by stamp extend
+        // building; store it as its own row so CommonHandler can look it up.
+        if (obj["refillStamps"] is JObject refill && !existing.Contains("refillStamps"))
+        {
+            db.SvUnlockEventDatas.Add(new SvUnlockEventData
+            {
+                Version = version,
+                EventId = "refillStamps",
+                Type = "refillStamps",
+                DataJson = refill.ToString(Formatting.None),
+            });
+            existing.Add("refillStamps");
+        }
         foreach (var prop in obj.Properties())
         {
             if (prop.Name == "refillStamps") continue;
@@ -484,5 +502,52 @@ public static class KfcSeeder
                 DataJson = v?.ToString(Formatting.None) ?? string.Empty,
             });
         }
+    }
+
+    private static void SeedEventList(StellaKFCContext db)
+    {
+        var path = Path.Combine(Directory.GetCurrentDirectory(), "Data", "Seed", "events_list.json");
+        if (!File.Exists(path))
+            path = Path.Combine(AppContext.BaseDirectory, "Data", "Seed", "events_list.json");
+        if (!File.Exists(path))
+        {
+            Console.WriteLine("[KfcSeeder] events_list.json not found; skipping event list seed.");
+            return;
+        }
+        var root = JObject.Parse(File.ReadAllText(path));
+        SeedEventListVersion(db, 6, root["events6"] as JArray);
+        SeedEventListVersion(db, 7, root["events7"] as JArray);
+    }
+
+    private static void SeedEventListVersion(StellaKFCContext db, int version, JArray? arr)
+    {
+        if (arr == null) return;
+        // Match by (Version, EventId). Only insert new rows — never overwrite
+        // Enabled/SettingsJson so user toggles survive re-seeding.
+        var existing = db.SvEventLists.Where(e => e.Version == version).Select(e => e.EventId).ToHashSet();
+        foreach (var tok in arr)
+        {
+            var obj = tok as JObject;
+            if (obj == null) continue;
+            string id = obj.Value<string>("id") ?? "";
+            if (id.Length == 0 || existing.Contains(id)) continue;
+            db.SvEventLists.Add(new SvEventList
+            {
+                Version = version,
+                EventId = id,
+                Type = obj.Value<string>("type") ?? "unknown",
+                MinVersion = FirstInt(obj["version"]),
+                StartDate = FirstInt(obj["start"]),
+                Enabled = false, // asphyxia: no config file => no extends
+                Name = obj.Value<string>("name"),
+            });
+        }
+    }
+
+    private static int FirstInt(JToken? tok)
+    {
+        if (tok is null) return 0;
+        if (tok.Type == JTokenType.Array) return tok.First?.Value<int>() ?? 0;
+        return tok.Value<int>();
     }
 }

@@ -56,6 +56,12 @@ public class DbDataProvider : IDataProvider
     public IReadOnlyList<SvUnlockEventData> GetUnlockEvents() =>
         _db.SvUnlockEventDatas.Where(e => e.Version == GameVersion).ToList();
 
+    public IReadOnlyList<SvEventList> GetEventList() =>
+        _db.SvEventLists.Where(e => e.Version == GameVersion).ToList();
+
+    public SvUnlockEventData? GetUnlockEvent(string eventId) =>
+        _db.SvUnlockEventDatas.FirstOrDefault(e => e.Version == GameVersion && e.EventId == eventId);
+
     public SvCurrentArena? GetCurrentArena() =>
         _db.SvCurrentArenas.FirstOrDefault(a => a.Version == GameVersion);
 

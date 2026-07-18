@@ -103,8 +103,8 @@ public sealed class KfcWebUIPageRenderer
         using var db = new StellaKFCContext();
         var m = new ViewModels.UnlockEventsModel
         {
-            Events = db.SvEventDatas.OrderBy(e => e.Version).ThenBy(e => e.EventId)
-                .Select(e => new ViewModels.UnlockEventsModel.EventRow(e.Version, e.EventId, e.SortOrder)).ToList(),
+            Events = db.SvEventLists.OrderBy(e => e.Version).ThenBy(e => e.Type).ThenBy(e => e.StartDate)
+                .Select(e => new ViewModels.UnlockEventsModel.EventRow(e.Version, e.EventId, e.Type, e.MinVersion, e.StartDate, e.Enabled, e.Name)).ToList(),
         };
         return await RenderInternal(r, "UnlockEvents.cshtml", m);
     }

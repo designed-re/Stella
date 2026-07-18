@@ -39,9 +39,10 @@ services:
       - ./docker/plugin_core.json:/app/plugins/plugin_core.json
       - ./docker/plugin_kfc.json:/app/plugins/plugin_kfc.json
       # Writable, persisted seed directory. On first boot Docker copies the
-      # image's Data/Seed/ (asphyxia_data.json, and music_db.xml if it was
-      # present at build time) into this volume. The WebUI "Data" page writes
-      # uploaded music_db.xml here, and it survives container recreation.
+      # image's Data/Seed/ (asphyxia_data.json, events_list.json, and
+      # music_db.xml if it was present at build time) into this volume. The
+      # WebUI "Data" page writes uploaded music_db.xml here, and it survives
+      # container recreation.
       - stella-seed:/app/Data/Seed
     restart: unless-stopped
 

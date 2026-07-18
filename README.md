@@ -101,7 +101,7 @@ Edit the mounted files on the host and restart the container (`docker compose re
 ### Volumes
 
 - `stella-db` — MariaDB data
-- `stella-seed` — mounted at `/app/Data/Seed`; persists `asphyxia_data.json` and uploaded `music_db.xml` across container recreation (Docker copies the image's seed assets into the volume on first boot)
+- `stella-seed` — mounted at `/app/Data/Seed`; persists `asphyxia_data.json`, `events_list.json`, and uploaded `music_db.xml` across container recreation (Docker copies the image's seed assets into the volume on first boot)
 
 ## Self-hosted (without Docker)
 
@@ -193,7 +193,7 @@ Plugin views are embedded Razor, runtime-compiled. They MUST use `@model object`
 
 ### Static Data
 
-Static game data (events, courses, valgene, apigene, arena, extend, information, music_limited, …) is stored in EF tables (`sv_static_*`) and seeded from `Data/Seed/asphyxia_data.json` (an extract of the asphyxia plugin's `data/*.ts`). Seeding is idempotent and triggered from the WebUI **Data** page.
+Static game data (events, courses, valgene, apigene, arena, extend, information, music_limited, …) is stored in EF tables (`sv_static_*`) and seeded from `Data/Seed/asphyxia_data.json` (an extract of the asphyxia plugin's `data/*.ts`) plus `Data/Seed/events_list.json` (the asphyxia `webui/asset/json/events.json` events6/7 catalog, used by the **Unlock Events** page to toggle stamp/tama/variant/achmissions events). Seeding is idempotent and triggered from the WebUI **Data** page.
 
 `music_db.xml` (shift_jis, ~8.4MB) is NOT committed. Upload it from the WebUI **Data** page (or place it in `StellaKFCPlugin/Data/Seed/music_db.xml` and use **Reload from disk**) to populate `sv_music`.
 

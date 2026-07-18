@@ -74,11 +74,19 @@ public static class KfcWebUIEvents
         var eventId = data.TryGetProperty("event_id", out var e) ? e.GetString() : null;
         if (string.IsNullOrEmpty(eventId)) return WebUIResult.JsonFrom(new { ok = false, message = "missing event_id" });
         using var db = new StellaKFCContext();
-        var ev = db.SvEventDatas.FirstOrDefault(x => x.Version == version && x.EventId == eventId);
+        // asphyxia webui/asset/config/events.json [id].toggle: toggles an event
+        // in the SvEventList (the events6/7 catalog), NOT the static EVENT6/7
+        // flags. CommonHandler.AddEventExtends only emits extends for events
+        // whose SvEventList.Enabled is true.
+        var ev = db.SvEventLists.FirstOrDefault(x => x.Version == version && x.EventId == eventId);
         if (ev is null) return WebUIResult.JsonFrom(new { ok = false, message = "event not found" });
-        ev.SortOrder = ev.SortOrder == 0 ? 1 : 0; // toggle a presence flag (SortOrder reused as enabled)
+        ev.Enabled = !ev.Enabled;
+        // Optional per-event settings (variant gate minOverTrackRank/minSealDiff,
+        // achmissions mission toggles) — stored as JSON in SettingsJson.
+        if (data.TryGetProperty("settings", out var s) && s.ValueKind == JsonValueKind.Object)
+            ev.SettingsJson = s.GetRawText();
         await db.SaveChangesAsync();
-        return WebUIResult.JsonFrom(new { ok = true, enabled = ev.SortOrder != 0 });
+        return WebUIResult.JsonFrom(new { ok = true, enabled = ev.Enabled });
     }
 
     private static async Task<WebUIResult?> UpdateProfile(JsonElement data)

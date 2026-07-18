@@ -356,16 +356,19 @@ namespace StellaKFCPlugin.Handlers
             short no = 0;
             foreach (var r in rivals)
             {
+                // asphyxia rival: seq = IDToCode(rival.sdvxID) where sdvxID is the
+                // rival profile's in-game id. Stella stores the display code on the
+                // profile (SvProfile.Code, already 0000-0000), so prefer the looked-
+                // up rival profile's Code; fall back to the stored sdvx id.
+                var rivalProfile = await db.SvProfiles
+                    .SingleOrDefaultAsync(x => x.RefId == r.RivalRefId && x.Version == gameVersion);
                 var entry = new RivalEntry
                 {
                     No = no++,
-                    Seq = KfcVersion.IdToCode(r.SdvxId),
+                    Seq = rivalProfile?.Code ?? KfcVersion.IdToCode(r.SdvxId),
                     Name = r.Name ?? string.Empty,
                 };
 
-                // Load the rival's score records (asphyxia DB.Find music by refid).
-                var rivalProfile = await db.SvProfiles
-                    .SingleOrDefaultAsync(x => x.RefId == r.RivalRefId && x.Version == gameVersion);
                 if (rivalProfile is not null)
                 {
                     var rivalScores = await db.SvScores

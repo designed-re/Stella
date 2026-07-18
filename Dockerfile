@@ -44,6 +44,7 @@ RUN mkdir -p /app/plugins \
 # preserved (Docker copies image contents into the volume on first boot).
 RUN mkdir -p /app/Data/Seed \
   && cp /src/StellaKFCPlugin/Data/Seed/asphyxia_data.json /app/Data/Seed/ \
+  && cp /src/StellaKFCPlugin/Data/Seed/events_list.json /app/Data/Seed/ \
   && (cp /src/StellaKFCPlugin/Data/Seed/music_db.xml /app/Data/Seed/ 2>/dev/null || true)
 
 # ---- runtime ----

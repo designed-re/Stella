@@ -96,24 +96,29 @@ namespace StellaKFCPlugin.Handlers
                     });
                 }
 
+               // Notification extend (Stella free-software banner; appended last so
+               // it never reorders asphyxia's EXTENDS/information entries).
+
+               var response = new GetCommonResponse { Status = "0" };
+
+               // --- Events ---
+               AddDateEvents(events, currentDate, gameVersion, provider);
+                // Event extends (asphyxia common.ts L386-485): stamp/completestamp/
+                // tama/variant extends + achmissions event flags, driven by the
+                // SvEventList toggle state. Pushed before response.Event so
+                // TAMAADV_ENABLE / ACHIEVEMENT_EVENT_MISSION flags land in events.
+                AddEventExtends(extend, events, provider, gameVersion, dVersion, date);
                 // Notification extend (Stella free-software banner; appended last so
-                // it never reorders asphyxia's EXTENDS/information entries).
+                // it never reorders asphyxia's EXTENDS/information/event entries).
+                extend.Add(new ExtendInfoRaw
                 {
-                    extend.Add(new ExtendInfoRaw
-                    {
-                        Id = 1, Type = 1,
-                        Params = new object[] { 1, infoTime, 0, 0, 0, $"[f:0] NOTIFICATION\nFREE SOFTWARE\n{date:s}", "", "", "", "" },
-                    });
-                }
-
-                var response = new GetCommonResponse { Status = "0" };
-
-                // --- Events ---
-                AddDateEvents(events, currentDate, gameVersion, provider);
-                response.Event = new EventElement
-                {
-                    Infos = events.Select(e => new EventInfo { EventId = e }).ToList(),
-                };
+                    Id = 1, Type = 1,
+                    Params = new object[] { 1, infoTime, 0, 0, 0, $"[f:0] NOTIFICATION\nFREE SOFTWARE\n{date:s}", "", "", "", "" },
+                });
+               response.Event = new EventElement
+               {
+                   Infos = events.Select(e => new EventInfo { EventId = e }).ToList(),
+               };
 
                 // --- Valgene ---
                 response.Valgene = BuildValgene(valgeneInfo, valgeneCatalog, dVersion);
@@ -326,6 +331,137 @@ namespace StellaKFCPlugin.Handlers
                 }
             }
             return el;
+        }
+
+        // asphyxia common.ts L386-485: builds stamp/completestamp/tama/variant
+        // extends and achmissions event flags from the SvEventList toggle state
+        // (asphyxia webui/asset/config/events.json) + the SvUnlockEventData
+        // payload (asphyxia UNLOCK_EVENTS6/7). Only events the user toggled on
+        // (SvEventList.Enabled) and that satisfy checkVerStart emit extends.
+        private void AddEventExtends(List<ExtendInfoRaw> extend, List<string> events,
+            IDataProvider provider, int gameVersion, int dVersion, DateTime date)
+        {
+            // refillStamps map (stmpid -> bonus count), shared across stamp events.
+            var refill = provider.GetUnlockEvent("refillStamps");
+            JObject? refillMap = refill is null ? null : JObject.Parse(refill.DataJson);
+
+            foreach (var eData in provider.GetEventList().Where(e => e.Enabled))
+            {
+                if (!KfcVersion.CheckVerStart(dVersion, eData.MinVersion, eData.StartDate, date)) continue;
+
+                var unlock = provider.GetUnlockEvent(eData.EventId);
+                if (unlock is null)
+                {
+                    // achmissions has no UNLOCK_EVENTS entry; it only pushes event flags.
+                    if (eData.EventId == "achmissions")
+                        AddAchmissionsEvents(events, eData);
+                    continue;
+                }
+
+                var info = JObject.Parse(unlock.DataJson);
+                var infoObj = info["info"] as JObject;
+                if (infoObj is null) continue;
+                string evType = unlock.Type;
+
+                switch (eData.Type)
+                {
+                    case "stamp":
+                        AddStampExtends(extend, infoObj, refillMap, evType);
+                        break;
+                    case "completestamp":
+                        extend.Add(new ExtendInfoRaw
+                        {
+                            Id = infoObj.Value<long>("id"), Type = 19,
+                            Params = new object[] { 0, 0, 0, 0, 0, (infoObj["data"] ?? new JObject()).ToString(Formatting.None), "", "", "", "" },
+                        });
+                        break;
+                    case "tama":
+                        events.Add("TAMAADV_ENABLE");
+                        extend.Add(new ExtendInfoRaw
+                        {
+                            Id = infoObj.Value<long>("id"), Type = 20,
+                            Params = new object[] { 0, 0, 0, 0, 0, infoObj.Value<string>("list") ?? "", "", "", "", "" },
+                        });
+                        break;
+                    case "variant":
+                        AddVariantExtend(extend, infoObj, eData);
+                        break;
+                }
+            }
+        }
+
+        private static void AddStampExtends(List<ExtendInfoRaw> extend, JObject info, JObject? refillMap, string evType)
+        {
+            var data = info["data"] as JArray;
+            if (data is null) return;
+            string stmpHd = info.Value<string>("stmpHd") ?? "";
+            string stmpFt = info.Value<string>("stmpFt") ?? "";
+            string stmpHdJ = info["stmpHdJ"] is not null ? (info.Value<string>("stmpHdJ") ?? "") : stmpHd;
+            string stmpFtJ = info["stmpFtJ"] is not null ? (info.Value<string>("stmpFtJ") ?? "") : stmpFt;
+            foreach (var d in data)
+            {
+                long stmpid = d!.Value<long>("stmpid");
+                long stps = d.Value<long>("stps");
+                string stprwrd = d.Value<string>("stprwrd") ?? "";
+                long refillVal = refillMap is not null && refillMap[stmpid.ToString()] is not null ? 999999 : 0;
+                extend.Add(new ExtendInfoRaw
+                {
+                    Id = stmpid, Type = 3,
+                    Params = new object[] { 5L, stps, 0L, stps % 10000, refillVal, stmpHdJ, stmpHd, stmpFtJ, stmpFt, stprwrd },
+                });
+            }
+
+            if (evType == "select")
+            {
+                long textstampval = info["textstampval"] is not null ? info.Value<long>("textstampval") : 0;
+                extend.Add(new ExtendInfoRaw
+                {
+                    Id = info.Value<long>("id"), Type = 3,
+                    Params = new object[] { 9L, textstampval, 0L, 0L, 0L, info.Value<string>("sheet") ?? "", "", info.Value<string>("stmpSlHd") ?? "", info.Value<string>("stmpSlFt") ?? "", info.Value<string>("stmpBg") ?? "" },
+                });
+            }
+        }
+
+        private static void AddVariantExtend(List<ExtendInfoRaw> extend, JObject info, SvEventList eData)
+        {
+            // asphyxia reads minOverTrackRank/minSealDiff from the user config
+            // (eventConfig[id].settings); Stella stores them in SvEventList.SettingsJson.
+            int minOverTrackRank = 0, minSealDiff = 0;
+            if (!string.IsNullOrEmpty(eData.SettingsJson))
+            {
+                var s = JObject.Parse(eData.SettingsJson);
+                minOverTrackRank = s["minOverTrackRank"] is not null ? s.Value<int>("minOverTrackRank") : 0;
+                minSealDiff = s["minSealDiff"] is not null ? s.Value<int>("minSealDiff") : 0;
+            }
+            extend.Add(new ExtendInfoRaw
+            {
+                Id = info.Value<long>("id"), Type = 22,
+                Params = new object[] { 0L, info.Value<long>("setid"), minOverTrackRank, minSealDiff, 0L, "", "", "", "", "" },
+            });
+        }
+
+        private static void AddAchmissionsEvents(List<string> events, SvEventList eData)
+        {
+            // asphyxia: eventConfig['achmissions'].toggle is { 'M_XX': true, ... }.
+            // The user toggles individual achievement missions; Stella stores the
+            // toggle object in SvEventList.SettingsJson.
+            if (string.IsNullOrEmpty(eData.SettingsJson)) return;
+            var cfg = JObject.Parse(eData.SettingsJson);
+            var toggle = cfg["toggle"] as JObject;
+            if (toggle is null) return;
+            string eventIds = "\t";
+            string prio = "1";
+            foreach (var prop in toggle.Properties())
+            {
+                if (prop.Value?.Type == JTokenType.Boolean && prop.Value.Value<bool>())
+                {
+                    string suffix = prop.Name.Contains('_') ? prop.Name.Split('_')[1] : prop.Name;
+                    eventIds += (eventIds == "\t" ? "" : ",") + suffix;
+                    prio = suffix;
+                }
+            }
+            events.Add("ACHIEVEMENT_EVENT_MISSION" + eventIds);
+            events.Add("ACHIEVEMENT_EVENT_MISSION_PRIORITY\t" + prio);
         }
 
         private ExtendElement BuildExtend(List<ExtendInfoRaw> extend)
