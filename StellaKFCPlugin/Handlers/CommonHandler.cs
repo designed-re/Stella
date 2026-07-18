@@ -402,8 +402,12 @@ namespace StellaKFCPlugin.Handlers
                 }
                 else if (absVersion == 7)
                 {
-                    // NABLA: songs with version == 7 or in EGSONGS_LOCKED crossresonance.
-                    if (egMerge.Contains(i))
+                    // NABLA: songs released in NABLA (info.version === '7') OR in
+                    // EGSONGS_LOCKED crossresonance (asphyxia common.ts L226-240).
+                    // The `song.Version == 7` condition was previously missing, which
+                    // dropped every NABLA-original song from music_limited in
+                    // non-unlock mode.
+                    if (song.Version == 7 || egMerge.Contains(i))
                     {
                         int limitedNo = 2;
                         if (licensedSongs.Contains(i)) limitedNo += 1;

@@ -19,8 +19,12 @@ public static class KfcVersion
         if (string.IsNullOrEmpty(model)) return 0;
         var parts = model.Split(':');
         if (parts.Length < 5) return 0;
-        // datecode is like "2025120900" — strip trailing 2-digit suffix for comparison.
-        if (!int.TryParse(parts[4].AsSpan(0, Math.Max(0, parts[4].Length - 2)), out var dateCode))
+        // asphyxia getVersion: parses the FULL datecode integer (e.g. 2026040700)
+        // and compares against 10-digit thresholds. Do NOT strip the trailing
+        // 2-digit suffix here — that yields an 8-digit value which is always less
+        // than the 10-digit thresholds and mis-detects every version as 1.
+        // (GetDateCode below does strip to 8 digits for the YMD datecode.)
+        if (!int.TryParse(parts[4], out var dateCode))
             return 0;
         if (dateCode <= 2013052900) return 1;
         if (dateCode <= 2014112000) return 2;
