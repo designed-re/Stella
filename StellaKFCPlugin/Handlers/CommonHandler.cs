@@ -283,38 +283,21 @@ namespace StellaKFCPlugin.Handlers
             return el;
         }
 
-        private SkillCourseElement BuildSkillCourses(IReadOnlyList<EF.StaticData.SvCourseData> courses, int dVersion, string cabType)
-        {
-            var el = new SkillCourseElement();
-            foreach (var s in courses)
-            {
-                if (dVersion < s.MinVersion) continue;
-                var seasonCourses = JArray.Parse(s.CoursesJson);
-                foreach (var c in seasonCourses)
+       private SkillCourseElement BuildSkillCourses(IReadOnlyList<EF.StaticData.SvCourseData> courses, int dVersion, string cabType)
+       {
+           var el = new SkillCourseElement();
+           foreach (var s in courses)
+           {
+               if (dVersion < s.MinVersion) continue;
+               var seasonCourses = JArray.Parse(s.CoursesJson);
+                // Replicate asphyxia common.ts L645-690 skill_course build, including the
+                // duplication quirk for G/H cabinets: when the God-course condition holds,
+                // asphyxia reassigns courseData = courseData.concat(godCourses) and then
+                // acc = acc.concat(courseData), so the normal courses get appended a
+                // second time before the God courses. Match that ordering exactly.
+                List<CourseInfo> BuildSeasonCourses(short skillType)
                 {
-                    var ci = new CourseInfo
-                    {
-                        SeasonId = s.SeriesId,
-                        SeasonName = s.SeriesName,
-                        SeasonNewFlg = s.IsNew,
-                        CourseType = c["type"]!.Value<short>(),
-                        CourseId = c["id"]!.Value<short>(),
-                        CourseName = c["name"]!.ToString(),
-                        SkillLevel = c["level"]!.Value<short>(),
-                        SkillType = 0,
-                        SkillNameId = c["nameID"]!.Value<short>(),
-                        MatchingAssist = c["assist"]?.Value<int>() == 1,
-                        ClearRate = 5000,
-                        AvgScore = 15000000,
-                    };
-                    foreach (var t in c["tracks"]!)
-                        ci.Tracks.Add(new TrackInfo { TrackNo = t["no"]!.Value<short>(), MusicId = t["mid"]!.Value<int>(), MusicType = (sbyte)t["mty"]!.Value<int>() });
-                    el.Infos.Add(ci);
-                }
-
-                // God courses for G/H cabinets (asphyxia common.ts L668-690).
-                if ((cabType == "G" || cabType == "H") && s.HasGod == 1 && dVersion >= 20230530)
-                {
+                    var list = new List<CourseInfo>();
                     foreach (var c in seasonCourses)
                     {
                         var ci = new CourseInfo
@@ -326,7 +309,7 @@ namespace StellaKFCPlugin.Handlers
                             CourseId = c["id"]!.Value<short>(),
                             CourseName = c["name"]!.ToString(),
                             SkillLevel = c["level"]!.Value<short>(),
-                            SkillType = s.HasGod,
+                            SkillType = skillType,
                             SkillNameId = c["nameID"]!.Value<short>(),
                             MatchingAssist = c["assist"]?.Value<int>() == 1,
                             ClearRate = 5000,
@@ -334,10 +317,23 @@ namespace StellaKFCPlugin.Handlers
                         };
                         foreach (var t in c["tracks"]!)
                             ci.Tracks.Add(new TrackInfo { TrackNo = t["no"]!.Value<short>(), MusicId = t["mid"]!.Value<int>(), MusicType = (sbyte)t["mty"]!.Value<int>() });
-                        el.Infos.Add(ci);
+                        list.Add(ci);
                     }
+                    return list;
                 }
-            }
+
+                var normalCourses = BuildSeasonCourses(0);
+                el.Infos.AddRange(normalCourses);
+
+                // God courses for G/H cabinets (asphyxia common.ts L668-690).
+                // Reproduce the asphyxia concat quirk: acc receives normal courses again,
+                // then the God courses (normal + god appended to courseData, then concat).
+                if ((cabType == "G" || cabType == "H") && s.HasGod == 1 && dVersion >= 20230530)
+                {
+                    el.Infos.AddRange(normalCourses);
+                    el.Infos.AddRange(BuildSeasonCourses((short)s.HasGod));
+                }
+           }
             return el;
         }
 
