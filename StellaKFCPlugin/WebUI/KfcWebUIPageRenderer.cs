@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Stella.Abstractions.WebUI;
 using StellaKFCPlugin.EF;
+using Newtonsoft.Json.Linq;
 
 namespace StellaKFCPlugin.WebUI;
 
@@ -101,11 +102,29 @@ public sealed class KfcWebUIPageRenderer
     private async Task<string?> RenderUnlockEvents(IPluginViewRenderer r)
     {
         using var db = new StellaKFCContext();
-        var m = new ViewModels.UnlockEventsModel
+        var lists = db.SvEventLists.OrderBy(e => e.Version).ThenBy(e => e.Type).ThenBy(e => e.StartDate).ToList();
+        var items = db.SvEventItems.ToList();
+        var rows = new List<ViewModels.UnlockEventsModel.EventRow>();
+        foreach (var e in lists)
         {
-            Events = db.SvEventLists.OrderBy(e => e.Version).ThenBy(e => e.Type).ThenBy(e => e.StartDate)
-                .Select(e => new ViewModels.UnlockEventsModel.EventRow(e.Version, e.EventId, e.Type, e.MinVersion, e.StartDate, e.Enabled, e.Name)).ToList(),
-        };
+            bool isPrefix = !string.IsNullOrEmpty(e.VersionsJson);
+            var subs = new List<ViewModels.UnlockEventsModel.SubItem>();
+            if (isPrefix)
+            {
+                // Object-toggle (prefix) gift/cross events: one sub-toggle per
+                // EVENT_ITEMS key matching <eventId>_<idx>, state in SettingsJson.toggle.
+                JObject? toggle = null;
+                if (!string.IsNullOrEmpty(e.SettingsJson))
+                    try { toggle = JObject.Parse(e.SettingsJson)?["toggle"] as JObject; } catch { }
+                foreach (var it in items.Where(i => i.Version == e.Version && i.ItemKey.StartsWith(e.EventId + "_")).OrderBy(i => i.ItemKey))
+                {
+                    bool on = toggle?[it.ItemKey]?.Type == JTokenType.Boolean && toggle[it.ItemKey].Value<bool>();
+                    subs.Add(new ViewModels.UnlockEventsModel.SubItem(it.ItemKey, on));
+                }
+            }
+            rows.Add(new ViewModels.UnlockEventsModel.EventRow(e.Version, e.EventId, e.Type, e.MinVersion, e.StartDate, e.Enabled, e.Name, isPrefix, subs));
+        }
+        var m = new ViewModels.UnlockEventsModel { Events = rows };
         return await RenderInternal(r, "UnlockEvents.cshtml", m);
     }
 

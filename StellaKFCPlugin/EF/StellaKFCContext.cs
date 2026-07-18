@@ -59,7 +59,8 @@ namespace StellaKFCPlugin.EF
         public virtual DbSet<StaticData.SvInformationData> SvInformationDatas { get; set; }
 
        public virtual DbSet<StaticData.SvUnlockEventData> SvUnlockEventDatas { get; set; }
-        public virtual DbSet<StaticData.SvEventList> SvEventLists { get; set; }
+       public virtual DbSet<StaticData.SvEventList> SvEventLists { get; set; }
+        public virtual DbSet<StaticData.SvEventItem> SvEventItems { get; set; }
 
         public virtual DbSet<StaticData.SvArenaStationItem> SvArenaStationItems { get; set; }
 
@@ -997,9 +998,22 @@ namespace StellaKFCPlugin.EF
                 entity.Property(e => e.Type).HasMaxLength(32).HasColumnName("type");
                 entity.Property(e => e.MinVersion).HasColumnType("int(11)").HasColumnName("min_version");
                 entity.Property(e => e.StartDate).HasColumnType("int(11)").HasColumnName("start_date");
+                entity.Property(e => e.VersionsJson).HasMaxLength(-1).HasColumnName("versions_json");
+                entity.Property(e => e.StartsJson).HasMaxLength(-1).HasColumnName("starts_json");
                 entity.Property(e => e.Enabled).HasColumnType("tinyint(1)").HasColumnName("enabled").HasDefaultValue(false);
                 entity.Property(e => e.Name).HasMaxLength(256).HasColumnName("name");
                 entity.Property(e => e.SettingsJson).HasMaxLength(-1).HasColumnName("settings_json");
+            });
+
+            builder.Entity<StaticData.SvEventItem>(entity =>
+            {
+                entity.HasKey(e => e.Id).HasName("PRIMARY");
+                entity.ToTable("sv_static_event_items");
+                entity.HasIndex(e => new { e.Version, e.ItemKey }, "idx_version_item_key").IsUnique();
+                entity.Property(e => e.Id).HasColumnType("int(11)").HasColumnName("id");
+                entity.Property(e => e.Version).HasColumnType("int(11)").HasColumnName("version");
+                entity.Property(e => e.ItemKey).HasMaxLength(64).HasColumnName("item_key");
+                entity.Property(e => e.ItemsJson).HasMaxLength(-1).HasColumnName("items_json");
             });
 
             builder.Entity<StaticData.SvArenaStationItem>(entity =>

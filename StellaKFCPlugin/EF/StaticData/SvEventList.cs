@@ -26,6 +26,12 @@ public partial class SvEventList
     /// <summary>Start date YYYYMMDD (first array element when asphyxia ships an array).</summary>
     public int StartDate { get; set; }
 
+    /// <summary>Full version array JSON (asphyxia ships arrays for object-toggle events); null when scalar.</summary>
+    public string? VersionsJson { get; set; }
+
+    /// <summary>Full start array JSON (asphyxia ships arrays for object-toggle events); null when scalar.</summary>
+    public string? StartsJson { get; set; }
+
     /// <summary>User toggle (asphyxia config [id].toggle). False by default.</summary>
     public bool Enabled { get; set; }
 

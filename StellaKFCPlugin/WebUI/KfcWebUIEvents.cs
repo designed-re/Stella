@@ -8,6 +8,8 @@ using Microsoft.Extensions.Logging;
 using Stella.Abstractions.WebUI;
 using StellaKFCPlugin.EF;
 using StellaKFCPlugin.Util;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace StellaKFCPlugin.WebUI;
 
@@ -80,6 +82,27 @@ public static class KfcWebUIEvents
         // whose SvEventList.Enabled is true.
         var ev = db.SvEventLists.FirstOrDefault(x => x.Version == version && x.EventId == eventId);
         if (ev is null) return WebUIResult.JsonFrom(new { ok = false, message = "event not found" });
+
+        // Sub-toggle (object-toggle / prefix gift+cross_online events): flip one
+        // sub-key inside SettingsJson.toggle. asphyxia stores these per-song
+        // toggles in eventConfig[id].toggle as an object keyed by <eventId>_<idx>.
+        if (data.TryGetProperty("subkey", out var sk) && sk.ValueKind == JsonValueKind.String)
+        {
+            var subkey = sk.GetString();
+            if (!string.IsNullOrEmpty(subkey))
+            {
+                JObject cfg = string.IsNullOrEmpty(ev.SettingsJson) ? new JObject() : JObject.Parse(ev.SettingsJson);
+                var toggle = cfg["toggle"] as JObject ?? new JObject();
+                bool cur = toggle[subkey]?.Type == JTokenType.Boolean && toggle[subkey]!.Value<bool>();
+                toggle[subkey] = !cur;
+                cfg["toggle"] = toggle;
+                ev.SettingsJson = cfg.ToString(Formatting.None);
+                await db.SaveChangesAsync();
+                return WebUIResult.JsonFrom(new { ok = true, enabled = !cur, subkey });
+            }
+        }
+
+        // Boolean toggle (direct events + stamp/tama/variant/achmissions extends).
         ev.Enabled = !ev.Enabled;
         // Optional per-event settings (variant gate minOverTrackRank/minSealDiff,
         // achmissions mission toggles) — stored as JSON in SettingsJson.

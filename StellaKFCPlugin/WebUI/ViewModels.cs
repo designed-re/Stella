@@ -26,7 +26,8 @@ public sealed class StartupFlagsModel
 public sealed class UnlockEventsModel
 {
     public IReadOnlyList<EventRow> Events { get; set; } = Array.Empty<EventRow>();
-    public sealed record EventRow(int Version, string EventId, string Type, int MinVersion, int StartDate, bool Enabled, string? Name);
+    public sealed record EventRow(int Version, string EventId, string Type, int MinVersion, int StartDate, bool Enabled, string? Name, bool IsPrefix, IReadOnlyList<SubItem> SubItems);
+    public sealed record SubItem(string Key, bool Toggled);
 }
 
 public sealed class WeeklyScoreAttackModel

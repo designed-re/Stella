@@ -97,8 +97,9 @@ public static class KfcSeeder
 
         // Event list (asphyxia webui/asset/json/events.json) — the per-version
         // catalog of events the WebUI can toggle. Loaded from a separate file so
-        // the big asphyxia_data.json blob is not rewritten on every change.
-        SeedEventList(db);
+        // the big asphyxia_data.json blob is not rewritten on every change. The
+        // EVENT_ITEMS6/7 reward lists come from the asphyxia_data.json root.
+        SeedEventList(db, root);
 
         // GRAVITY WARS (sv3) data
         if (gw != null)
@@ -504,7 +505,7 @@ public static class KfcSeeder
         }
     }
 
-    private static void SeedEventList(StellaKFCContext db)
+    private static void SeedEventList(StellaKFCContext db, JObject dataRoot)
     {
         var path = Path.Combine(Directory.GetCurrentDirectory(), "Data", "Seed", "events_list.json");
         if (!File.Exists(path))
@@ -514,32 +515,72 @@ public static class KfcSeeder
             Console.WriteLine("[KfcSeeder] events_list.json not found; skipping event list seed.");
             return;
         }
-        var root = JObject.Parse(File.ReadAllText(path));
-        SeedEventListVersion(db, 6, root["events6"] as JArray);
-        SeedEventListVersion(db, 7, root["events7"] as JArray);
+        var evRoot = JObject.Parse(File.ReadAllText(path));
+        SeedEventListVersion(db, 6, evRoot["events6"] as JArray);
+        SeedEventListVersion(db, 7, evRoot["events7"] as JArray);
+        // Event reward item lists (asphyxia EVENT_ITEMS6/7) — from the main
+        // asphyxia_data.json blob. Used by LoadHandler to grant gift-event
+        // presents.
+        SeedEventItems(db, 6, dataRoot["EVENT_ITEMS6"] as JObject);
+        SeedEventItems(db, 7, dataRoot["EVENT_ITEMS7"] as JObject);
     }
 
     private static void SeedEventListVersion(StellaKFCContext db, int version, JArray? arr)
     {
         if (arr == null) return;
-        // Match by (Version, EventId). Only insert new rows — never overwrite
-        // Enabled/SettingsJson so user toggles survive re-seeding.
-        var existing = db.SvEventLists.Where(e => e.Version == version).Select(e => e.EventId).ToHashSet();
+        // Match by (Version, EventId). Insert new rows; for existing rows refresh
+        // the static catalog fields (Type/MinVersion/StartDate/VersionsJson/
+        // StartsJson/Name) but NEVER touch Enabled/SettingsJson so user toggles
+        // survive re-seeding.
+        var existing = db.SvEventLists.Where(e => e.Version == version).ToDictionary(e => e.EventId);
         foreach (var tok in arr)
         {
             var obj = tok as JObject;
             if (obj == null) continue;
             string id = obj.Value<string>("id") ?? "";
-            if (id.Length == 0 || existing.Contains(id)) continue;
+            if (id.Length == 0) continue;
+            var verTok = obj["version"];
+            var startTok = obj["start"];
+            string? versionsJson = verTok is JArray a ? a.ToString(Formatting.None) : null;
+            string? startsJson = startTok is JArray sa ? sa.ToString(Formatting.None) : null;
+            if (existing.TryGetValue(id, out var row))
+            {
+                row.Type = obj.Value<string>("type") ?? "unknown";
+                row.MinVersion = FirstInt(verTok);
+                row.StartDate = FirstInt(startTok);
+                row.VersionsJson = versionsJson;
+                row.StartsJson = startsJson;
+                row.Name = obj.Value<string>("name");
+                db.SvEventLists.Update(row);
+                continue;
+            }
             db.SvEventLists.Add(new SvEventList
             {
                 Version = version,
                 EventId = id,
                 Type = obj.Value<string>("type") ?? "unknown",
-                MinVersion = FirstInt(obj["version"]),
-                StartDate = FirstInt(obj["start"]),
+                MinVersion = FirstInt(verTok),
+                StartDate = FirstInt(startTok),
+                VersionsJson = versionsJson,
+                StartsJson = startsJson,
                 Enabled = false, // asphyxia: no config file => no extends
                 Name = obj.Value<string>("name"),
+            });
+        }
+    }
+
+    private static void SeedEventItems(StellaKFCContext db, int version, JObject? obj)
+    {
+        if (obj == null) return;
+        var existing = db.SvEventItems.Where(e => e.Version == version).Select(e => e.ItemKey).ToHashSet();
+        foreach (var prop in obj.Properties())
+        {
+            if (existing.Contains(prop.Name)) continue;
+            db.SvEventItems.Add(new SvEventItem
+            {
+                Version = version,
+                ItemKey = prop.Name,
+                ItemsJson = prop.Value?.ToString(Formatting.None) ?? "[]",
             });
         }
     }

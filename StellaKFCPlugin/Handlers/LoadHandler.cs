@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json.Linq;
 using Microsoft.Extensions.Logging;
 using Stella.Abstractions.Plugins;
 using StellaKFCPlugin.Data;
@@ -78,8 +79,13 @@ namespace StellaKFCPlugin.Handlers
                 await db.SaveChangesAsync();
             }
 
-            // result=2 when loading a profile from an older game version.
-            byte result = (byte)(gameVersion > profile.Version ? 2 : 0);
+           // result=2 when loading a profile from an older game version.
+           byte result = (byte)(gameVersion > profile.Version ? 2 : 0);
+
+            // Grant gift-event presents (asphyxia load L820-907). Must run BEFORE
+            // the SvItems query below so newly granted items also appear in the
+            // response `item` list (asphyxia re-reads items from DB after granting).
+            var grantedPresents = await GrantEventPresents(db, profile.Id, gameVersion, dVersion);
 
             var skill = await db.SvSkills.SingleOrDefaultAsync(s => s.Profile == profile.Id && s.Version == gameVersion)
                 ?? new SvSkill { Base = 0, Level = 0, Name = 0, Type = 0 };
@@ -208,6 +214,12 @@ namespace StellaKFCPlugin.Handlers
             response.Item = new ItemElement
             {
                 Infos = items.Select(x => new ItemInfo { Type = x.Type, Id = x.ItemId, Param = x.Param }).ToList(),
+            };
+
+            // Presents (asphyxia pug L165-170) — newly granted gift-event items.
+            response.Present = new PresentElement
+            {
+                Infos = grantedPresents.Select(p => new PresentInfo { Type = p.Type, Id = p.Id, Param = p.Param }).ToList(),
             };
 
             // Params (asphyxia pug L149-154) + akaname entries (type 6 id 0/1/2).
@@ -385,6 +397,108 @@ namespace StellaKFCPlugin.Handlers
                 response.Rivals.Add(entry);
             }
             return response;
+        }
+
+        // asphyxia load L820-907: grant gift-event presents for toggled-on events.
+        // gift_crew -> item type 11 param 1; gift_ap -> type 1 param 1;
+        // gift / cross_online -> type 0 param 23. Boolean-toggle (direct) events
+        // use SvEventList.Enabled + the eventItems[eventId] list; object-toggle
+        // (prefix) events use SettingsJson {toggle:{subkey:bool}} and per-subkey
+        // version/start arrays (VersionsJson/StartsJson). Items already owned are
+        // not re-granted. Also grants the April-Fools yukkuri presents when
+        // dVersion >= 20250324 and (the aprilyukkuri flag is on OR it is April 1).
+        private static async Task<List<(byte Type, uint Id, uint Param)>> GrantEventPresents(
+            StellaKFCContext db, int profileId, int gameVersion, int dVersion)
+        {
+            var presents = new List<(byte, uint, uint)>();
+            var typeIds = new Dictionary<string, (byte Type, uint Param)>
+            {
+                ["gift_crew"] = (11, 1),
+                ["gift_ap"] = (1, 1),
+                ["gift"] = (0, 23),
+                ["cross_online"] = (0, 23),
+            };
+            var giftTypes = new HashSet<string> { "gift", "gift_ap", "gift_crew", "cross_online" };
+            var date = DateTime.Now;
+            var events = await db.SvEventLists.Where(e => e.Version == gameVersion).ToListAsync();
+            var eventItems = await db.SvEventItems.Where(e => e.Version == gameVersion)
+                .ToDictionaryAsync(e => e.ItemKey, e => e.ItemsJson);
+
+            foreach (var eData in events)
+            {
+                if (!giftTypes.Contains(eData.Type)) continue;
+                if (!typeIds.TryGetValue(eData.Type, out var tp)) continue;
+                var (itemType, itemParam) = tp;
+
+                // Object-toggle (prefix) events: SettingsJson carries a toggle object
+                // keyed by <eventId>_<idx>. Boolean-toggle (direct) events: Enabled.
+                JObject? toggleObj = null;
+                if (!string.IsNullOrEmpty(eData.SettingsJson))
+                {
+                    try { toggleObj = JObject.Parse(eData.SettingsJson)?["toggle"] as JObject; }
+                    catch { toggleObj = null; }
+                }
+
+                if (toggleObj != null && eData.VersionsJson != null && eData.StartsJson != null)
+                {
+                    var versions = JArray.Parse(eData.VersionsJson);
+                    var starts = JArray.Parse(eData.StartsJson);
+                    int idx = 0;
+                    foreach (var prop in toggleObj.Properties())
+                    {
+                        if (idx >= starts.Count) break;
+                        if (prop.Value?.Type != JTokenType.Boolean || !prop.Value.Value<bool>()) { idx++; continue; }
+                        int ver = versions[idx].Value<int>();
+                        int start = starts[idx].Value<int>();
+                        if (KfcVersion.CheckVerStart(dVersion, ver, start, date))
+                            GrantItems(db, profileId, gameVersion, itemType, itemParam, prop.Name, eventItems, presents);
+                        idx++;
+                    }
+                }
+                else if (eData.Enabled && KfcVersion.CheckVerStart(dVersion, eData.MinVersion, eData.StartDate, date))
+                {
+                    GrantItems(db, profileId, gameVersion, itemType, itemParam, eData.EventId, eventItems, presents);
+                }
+            }
+
+            // April-Fools yukkuri presents (asphyxia load L888-907).
+            if (dVersion >= 20250324)
+            {
+                bool aprilyukkuri = false; // asphyxia flags.json aprilyukkuri toggle (not modelled in Stella)
+                bool april1 = date.ToString("M/d/yyyy", System.Globalization.CultureInfo.InvariantCulture).StartsWith("4/1/");
+                if (aprilyukkuri || april1)
+                {
+                    GrantSingle(db, profileId, gameVersion, 1, 5546, 1, presents);
+                    GrantSingle(db, profileId, gameVersion, 14, 10244, 1, presents);
+                }
+            }
+
+            if (presents.Count > 0) await db.SaveChangesAsync();
+            return presents;
+        }
+
+        private static void GrantItems(StellaKFCContext db, int profileId, int gameVersion,
+            byte itemType, uint itemParam, string itemKey,
+            Dictionary<string, string> eventItems, List<(byte, uint, uint)> presents)
+        {
+            if (!eventItems.TryGetValue(itemKey, out var json)) return;
+            JArray arr;
+            try { arr = JArray.Parse(json); } catch { return; }
+            foreach (var tok in arr)
+            {
+                uint itemId = (uint)tok.Value<int>();
+                GrantSingle(db, profileId, gameVersion, itemType, itemId, itemParam, presents);
+            }
+        }
+
+        private static void GrantSingle(StellaKFCContext db, int profileId, int gameVersion,
+            byte itemType, uint itemId, uint itemParam, List<(byte, uint, uint)> presents)
+        {
+            bool exists = db.SvItems.Any(x => x.Profile == profileId && x.Version == gameVersion
+                && x.Type == itemType && x.ItemId == itemId);
+            if (exists) return;
+            db.SvItems.Add(new SvItem { Profile = profileId, Version = gameVersion, Type = itemType, ItemId = itemId, Param = itemParam });
+            presents.Add((itemType, itemId, itemParam));
         }
     }
 }
