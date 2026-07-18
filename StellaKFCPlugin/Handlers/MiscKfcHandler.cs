@@ -276,12 +276,14 @@ namespace StellaKFCPlugin.Handlers
         [XmlElement(ElementName = "result")]
         public sbyte Result { get; set; }
 
-        [XmlArray(ElementName = "genesis_cards")]
-        [XmlArrayItem(ElementName = "info")]
+        // asphyxia print: `genesis_cards: [...]` and `after_power: [...]` are
+        // direct arrays -> KBinJSON serialises them as repeated same-named
+        // elements (<genesis_cards>...</genesis_cards> x N), NOT wrapped in an
+        // <info> child. XmlElement (not XmlArray) reproduces that wire shape.
+        [XmlElement(ElementName = "genesis_cards")]
         public List<PrintGenesisCard> GenesisCards { get; set; } = new();
 
-        [XmlArray(ElementName = "after_power")]
-        [XmlArrayItem(ElementName = "info")]
+        [XmlElement(ElementName = "after_power")]
         public List<PrintAfterPower> AfterPower { get; set; } = new();
     }
 
