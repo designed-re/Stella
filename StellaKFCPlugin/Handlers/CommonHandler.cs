@@ -258,7 +258,10 @@ namespace StellaKFCPlugin.Handlers
 
             if (shopOpen && cfg.ArenaStation != null)
             {
-                var station = arenaItems.FirstOrDefault(s => s.SetName == cfg.ArenaStation);
+                // asphyxia sv7 merges {...ARENA_STATION_ITEMS, ...ARENA_STATION_ITEMS7} —
+                // NABLA entries override EG for the same key. Prefer the highest Version.
+                var station = arenaItems.Where(s => s.SetName == cfg.ArenaStation)
+                    .OrderByDescending(s => s.Version).FirstOrDefault();
                 if (station != null && dVersion >= station.MinVersion)
                 {
                     var items = JArray.Parse(station.ItemsJson);

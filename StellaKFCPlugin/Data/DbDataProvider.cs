@@ -36,10 +36,12 @@ public class DbDataProvider : IDataProvider
     // sv6 (EXCEED GEAR) uses VALGENE only. So for GameVersion >= 7 we return
     // both Version=6 and Version=7 rows; otherwise just the matching version.
     public IReadOnlyList<SvValgeneData> GetValgeneInfo() =>
-        _db.SvValgeneDatas.Where(v => GameVersion >= 7 ? v.Version == 6 || v.Version == 7 : v.Version == GameVersion).ToList();
+        _db.SvValgeneDatas.Where(v => GameVersion >= 7 ? v.Version == 6 || v.Version == 7 : v.Version == GameVersion)
+            .OrderBy(v => v.Version).ThenBy(v => v.ValgeneId).ToList();
 
     public IReadOnlyList<SvValgeneCatalog> GetValgeneCatalog() =>
-        _db.SvValgeneCatalogs.Where(v => GameVersion >= 7 ? v.Version == 6 || v.Version == 7 : v.Version == GameVersion).ToList();
+        _db.SvValgeneCatalogs.Where(v => GameVersion >= 7 ? v.Version == 6 || v.Version == 7 : v.Version == GameVersion)
+            .OrderBy(v => v.Version).ThenBy(v => v.ValgeneId).ToList();
 
     public IReadOnlyList<SvApigeneData> GetApigeneInfo() =>
         _db.SvApigeneDatas.Where(a => a.Version == GameVersion).ToList();
@@ -66,7 +68,7 @@ public class DbDataProvider : IDataProvider
         _db.SvCurrentArenas.FirstOrDefault(a => a.Version == GameVersion);
 
     public IReadOnlyList<SvArenaStationItem> GetArenaStationItems() =>
-        _db.SvArenaStationItems.Where(a => a.Version == GameVersion).ToList();
+        _db.SvArenaStationItems.Where(a => GameVersion >= 7 ? a.Version == 6 || a.Version == 7 : a.Version == GameVersion).ToList();
 
     public IReadOnlyList<SvMusicOverride> GetMusicOverrides() =>
         _db.SvMusicOverrides.Where(m => m.Version == GameVersion).ToList();
