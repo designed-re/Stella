@@ -269,6 +269,7 @@ These bugs were found by diffing Stella against `/home/user/core` and `/home/use
 - **`KfcVersion.GetVersion` parses the FULL 10-digit datecode** (e.g. `2026040700`) and compares against 10-digit thresholds, exactly like asphyxia `utils.ts getVersion`. It must NOT strip the trailing 2 digits — that yields an 8-digit value which is always less than the 10-digit thresholds and mis-detects every version as 1 (BOOTH), breaking every bare `game.*` / `game_3.*` route that calls `GetVersion(Model)`. (`GetDateCode` does strip to 8 digits for the YMD datecode — that is correct and separate.)
 - **`save_valgene` response** only emits `ticket_num`/`limit_date` when a `sv_valgene_tickets` row exists (asphyxia `saveValgene` guards them with `if valgeneTicket !== null`). `SaveValgeneResponse.TicketNum`/`LimitDate` are nullable (`int?`/`ulong?`).
 - **Non-unlock `music_limited` sv7** must include NABLA-original songs (`info.version === '7'`) in addition to `EGSONGS_LOCKED.crossresonance` (asphyxia `common.ts` L226). The `song.Version == 7` condition was missing, dropping every NABLA-original song in non-unlock mode.
+- **`services.get` `expire` is 10800** (asphyxia core `index.ts` services.get `@attr.expire`), not 600. Core service items are advertised in asphyxia `coreModules` declaration order (ntp + keepalive first). Stella additionally advertises per-plugin service prefixes dynamically — that is an intentional Stella extension (drop-in plugin discovery), not an asphyxia feature.
 
 ### Fields NOT in asphyxia responses
 

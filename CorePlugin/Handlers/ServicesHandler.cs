@@ -24,6 +24,9 @@ namespace CorePlugin.Handlers
             // service level (not method level) because that's what e-amusement
             // uses in the services.get response. Some have no backing handler
             // (e.g. numbering, lobby) but must still be advertised.
+            // Order matches asphyxia core index.ts: ntp + keepalive first, then
+            // coreModules in declaration order, then per-plugin services appended
+            // dynamically below.
             var items = new List<ServiceItem>
             {
                 new ServiceItem { Name = "ntp", Url = "ntp://pool.ntp.org/" },
@@ -40,14 +43,14 @@ namespace CorePlugin.Handlers
                 new ServiceItem { Name = "userdata", Url = url },
                 new ServiceItem { Name = "userid", Url = url },
                 new ServiceItem { Name = "eacoin", Url = url },
-                new ServiceItem { Name = "dlstatus", Url = url },
-                new ServiceItem { Name = "netlog", Url = url },
-                new ServiceItem { Name = "sidmgr", Url = url },
-                new ServiceItem { Name = "globby", Url = url },
                 new ServiceItem { Name = "local", Url = url },
                 new ServiceItem { Name = "local2", Url = url },
                 new ServiceItem { Name = "lobby", Url = url },
                 new ServiceItem { Name = "lobby2", Url = url },
+                new ServiceItem { Name = "dlstatus", Url = url },
+                new ServiceItem { Name = "netlog", Url = url },
+                new ServiceItem { Name = "sidmgr", Url = url },
+                new ServiceItem { Name = "globby", Url = url },
             };
 
             // Dynamically discover services from loaded plugins. PluginService
@@ -68,7 +71,7 @@ namespace CorePlugin.Handlers
 
             return new GetServicesResponse
             {
-                Expire = 600,
+                Expire = 10800,
                 Method = "get",
                 Mode = "operation",
                 Status = 0,
