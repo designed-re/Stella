@@ -1,0 +1,18 @@
+@model object
+@{ dynamic m = Model; }
+@Html.AntiForgeryToken()
+<div class="rounded-xl bg-zinc-900/60 border border-zinc-800 overflow-hidden">
+    <div class="px-5 py-4 border-b border-zinc-800"><p class="font-medium text-zinc-100">Unlock events <span class="text-zinc-500 text-sm">(@m.Events.Count)</span></p></div>
+    <div class="overflow-x-auto max-h-[70vh]">
+    <table class="w-full text-sm">
+        <thead class="text-left text-zinc-500 border-b border-zinc-800 sticky top-0 bg-zinc-900"><tr><th class="px-5 py-2 font-medium">Version</th><th class="px-5 py-2 font-medium">Event ID</th><th class="px-5 py-2 font-medium">Enabled (sort_order)</th><th class="px-5 py-2 font-medium"></th></tr></thead>
+        <tbody>
+        @foreach (var e in m.Events){<tr class="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-800/30"><td class="px-5 py-3 text-zinc-400">sv@e.Version</td><td class="px-5 py-3 text-zinc-100 font-mono text-xs">@e.EventId</td><td class="px-5 py-3 text-zinc-400">@e.SortOrder</td><td class="px-5 py-3 text-right"><button class="text-pink-400 hover:text-pink-300" onclick="toggleEvent(@e.Version,'@e.EventId',this)">toggle</button></td></tr>}
+        @if (m.Events.Count==0){<tr><td colspan="4" class="px-5 py-8 text-center text-zinc-500">No events seeded. Seed static data from the Data page.</td></tr>}
+        </tbody>
+    </table>
+    </div>
+</div>
+<script>
+async function toggleEvent(v,id,btn){const r=await Stella.emit("StellaKFCPlugin","toggleUnlockEvent",{version:v,event_id:id});if(r?.ok)btn.closest("tr").querySelector("td:nth-child(3)").textContent=r.enabled?"1":"0";}
+</script>

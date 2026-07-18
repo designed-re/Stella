@@ -29,11 +29,17 @@ public class DbDataProvider : IDataProvider
     public IReadOnlyList<SvCourseData> GetCourses() =>
         _db.SvCourseDatas.Where(c => c.Version == GameVersion).ToList();
 
+    // asphyxia sv7 (NABLA) merges VALGENE (vols 1-18, seeded as Version=6)
+    // with VALGENE7 (vol 19, seeded as Version=7) — see common.ts sv7_common:
+    //   valgene = { info: [...VALGENE.info, ...VALGENE7.info],
+    //               catalog: [...VALGENE.catalog, ...VALGENE7.catalog] }
+    // sv6 (EXCEED GEAR) uses VALGENE only. So for GameVersion >= 7 we return
+    // both Version=6 and Version=7 rows; otherwise just the matching version.
     public IReadOnlyList<SvValgeneData> GetValgeneInfo() =>
-        _db.SvValgeneDatas.Where(v => v.Version == GameVersion).ToList();
+        _db.SvValgeneDatas.Where(v => GameVersion >= 7 ? v.Version == 6 || v.Version == 7 : v.Version == GameVersion).ToList();
 
     public IReadOnlyList<SvValgeneCatalog> GetValgeneCatalog() =>
-        _db.SvValgeneCatalogs.Where(v => v.Version == GameVersion).ToList();
+        _db.SvValgeneCatalogs.Where(v => GameVersion >= 7 ? v.Version == 6 || v.Version == 7 : v.Version == GameVersion).ToList();
 
     public IReadOnlyList<SvApigeneData> GetApigeneInfo() =>
         _db.SvApigeneDatas.Where(a => a.Version == GameVersion).ToList();

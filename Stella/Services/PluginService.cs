@@ -10,10 +10,18 @@ namespace Stella.Services
     public class PluginService(ILogger<PluginService> logger)
     {
         private readonly List<IStellaPlugin> _loadedPlugins = new();
+        private readonly List<Assembly> _loadedAssemblies = new();
+        private readonly Dictionary<Assembly, string> _assemblyPaths = new();
         private readonly Dictionary<string, (Type HandlerType, MethodInfo Method, IStellaPluginConfig PluginConfig, ILogger Logger)> _handlerCache = new();
         private static readonly ConcurrentDictionary<Type, XmlSerializer> _serializerCache = new();
 
         public IReadOnlyList<IStellaPlugin> LoadedPlugins => _loadedPlugins.AsReadOnly();
+
+        /// <summary>Assemblies loaded from the plugins/ directory (for Razor ApplicationParts &amp; static asset providers).</summary>
+        public IReadOnlyList<Assembly> LoadedAssemblies => _loadedAssemblies.AsReadOnly();
+
+        /// <summary>Maps each loaded plugin assembly to its on-disk DLL path (Razor runtime-compilation reference path).</summary>
+        public IReadOnlyDictionary<Assembly, string> AssemblyPaths => _assemblyPaths;
 
         /// <summary>
         /// Returns all registered handler keys as "service.method" strings.
@@ -24,17 +32,27 @@ namespace Stella.Services
 
     public async Task LoadPluginsAsync()
     {
-        var path = Path.Combine(Directory.GetCurrentDirectory(), "plugins");
-
-        if (!Directory.Exists(path))
-            Directory.CreateDirectory(path);
-
-        var dlls = Directory.GetFiles(path, "*.dll", SearchOption.AllDirectories);
+        // Plugins live in a "plugins/" directory. Gather DLLs from both the
+        // current working directory (production/Docker app root) and the host
+        // assembly base directory (the bin output when running via
+        // `dotnet run --project Stella`, whose CWD is the project dir).
+        var searchPaths = new[]
+        {
+            Path.Combine(Directory.GetCurrentDirectory(), "plugins"),
+            Path.Combine(AppContext.BaseDirectory, "plugins"),
+        };
+        var dlls = searchPaths.Where(Directory.Exists)
+            .SelectMany(p => Directory.GetFiles(p, "*.dll", SearchOption.AllDirectories))
+            .Distinct()
+            .ToArray();
+        foreach (var p in searchPaths) if (!Directory.Exists(p)) Directory.CreateDirectory(p);
         foreach (var dll in dlls)
         {
             try
             {
                 var assembly = Assembly.Load(await File.ReadAllBytesAsync(dll));
+                _assemblyPaths[assembly] = dll;
+                _loadedAssemblies.Add(assembly);
                 logger.LogInformation($"Loaded plugin assembly: {assembly.FullName}");
 
                 // Load IStellaPlugin implementations only.

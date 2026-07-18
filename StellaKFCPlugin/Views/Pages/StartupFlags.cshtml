@@ -1,0 +1,24 @@
+@model object
+@{ var c = ((dynamic)Model).Config; }
+@Html.AntiForgeryToken()
+<form id="flags-form" class="rounded-xl bg-zinc-900/60 border border-zinc-800 p-6 max-w-2xl space-y-4">
+    <p class="font-medium text-zinc-100 mb-2">Plugin toggles (saved to <code class="text-pink-300">plugin_kfc.json</code>)</p>
+    <div class="space-y-3">
+        @foreach (var f in new[] { ("unlock_all_songs", c.UnlockAllSongs, "Unlock all songs"), ("arena_open", c.ArenaOpen, "Keep ARENA open"), ("arena_no_endtime", c.ArenaNoEndtime, "ARENA no end time"), ("unlock_all_navigators", c.UnlockAllNavigators, "Unlock all navigators"), ("unlock_all_appeal_cards", c.UnlockAllAppealCards, "Unlock all appeal cards"), ("unlock_all_valk_items", c.UnlockAllValkItems, "Unlock customization items"), ("use_blasterpass", c.UseBlasterPass, "Use BLASTER PASS"), ("gw_mission", c.GwMission, "GW mission (sv3)"), ("gw_gene", c.GwGene, "GW gene (sv3)") })
+        {
+            <label class="flex items-center justify-between gap-4 px-3 py-2 rounded-md bg-zinc-950/60 border border-zinc-800">
+                <span class="text-sm text-zinc-300">@f.Item3</span>
+                <input type="checkbox" name="@f.Item1" value="true" @(f.Item2 ? "checked" : "") class="h-4 w-4 accent-pink-500" />
+            </label>
+        }
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+        <label class="block"><span class="text-sm text-zinc-400">ARENA session</span><input type="number" name="arena_session" value="@c.ArenaSession" class="mt-1 w-full px-3 py-2 rounded-md bg-zinc-950 border border-zinc-800 text-zinc-200" /></label>
+        <label class="block"><span class="text-sm text-zinc-400">ARENA station</span><input type="text" name="arena_station" value="@c.ArenaStation" class="mt-1 w-full px-3 py-2 rounded-md bg-zinc-950 border border-zinc-800 text-zinc-200" /></label>
+    </div>
+    <button type="submit" class="px-4 py-2 rounded-md bg-pink-500 hover:bg-pink-400 text-zinc-950 font-medium">Apply</button>
+    <p id="flags-msg" class="text-sm text-zinc-400"></p>
+</form>
+<script>
+document.getElementById("flags-form").addEventListener("submit",async(e)=>{e.preventDefault();const f=e.target;const p={};f.querySelectorAll("input[type=checkbox]").forEach(cb=>p[cb.name]=cb.checked);f.querySelectorAll("input[type=number],input[type=text]").forEach(i=>p[i.name]=i.value);const m=document.getElementById("flags-msg");m.textContent="saving…";const r=await Stella.emit("StellaKFCPlugin","saveStartupFlags",p);m.textContent=r?.ok?"✓ saved":"✗ "+(r?.message??"error");});
+</script>

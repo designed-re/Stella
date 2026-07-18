@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 using Stella.Abstractions;
 using Stella.Middleware;
 using Stella.Services;
+using Stella.Abstractions.Configuration;
+using Stella.WebUI;
 using Stella.Util;
 
 namespace Stella
@@ -22,7 +24,9 @@ namespace Stella
 
             builder.Services.AddControllers();
 
-            builder.WebHost.UseUrls(Environment.GetEnvironmentVariable("ASPNETCORE_URLS") ?? "http://+:80");
+            // Bind Stella/WebUI options from appsettings.json (no env vars).
+            StellaOptions.Bind(builder.Configuration);
+            builder.WebHost.UseUrls(builder.Configuration["Urls"] ?? "http://+:80");
 
             var pluginService =
                 new PluginService(LoggerFactory.Create(x => x.AddConsole()).CreateLogger<PluginService>());
@@ -40,12 +44,33 @@ namespace Stella
                 }
             }
 
+            // Register WebUI services (Razor Pages, cookie auth, antiforgery, plugin
+            // ApplicationParts) and per-plugin AJAX event handlers.
+            if (StellaOptions.WebUIEnabled)
+            {
+                builder.Services.AddStellaWebUI(pluginService);
+                foreach (var plugin in pluginService.LoadedPlugins)
+                {
+                    if (!plugin.PluginConfig.Enabled) continue;
+                    var router = WebUIEventRegistryStore.GetOrCreate(plugin.Name);
+                    plugin.RegisterWebUIEvents(router);
+                }
+            }
+
             var app = builder.Build();
             foreach (var plugin in pluginService.LoadedPlugins)
             {
                 await plugin.OnAppInitialize(app);
             }
-            
+
+            if (StellaOptions.WebUIEnabled)
+            {
+                app.UseAuthentication();
+                app.UseAuthorization();
+                app.UseStaticFiles();
+                app.MapStellaWebUI(pluginService);
+            }
+
             app.UseMiddleware<EAmuseXrpcInputMiddleware>();
 
             var eamuseGroup = app.MapGroup("eamuse");

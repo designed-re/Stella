@@ -1,0 +1,72 @@
+@inject PluginService Plugins
+@{
+    var plugins = Plugins.LoadedPlugins;
+    var pageItems = plugins
+        .Where(p => p.PluginConfig?.Enabled != false)
+        .Select(p => new {
+            Id = p.Name,
+            Name = p.Name,
+            Pages = p.WebUIPages,
+        }).ToList();
+}
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] — Stella</title>
+    <link rel="stylesheet" href="/webui/css/app.css" />
+</head>
+<body class="min-h-screen bg-zinc-950 text-zinc-200 antialiased">
+<div class="flex min-h-screen">
+    <aside class="w-64 shrink-0 border-r border-zinc-800 bg-zinc-900/60 flex flex-col">
+        <a href="/webui" class="px-5 py-5 flex items-center gap-3 border-b border-zinc-800">
+            <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-pink-500/20 text-pink-300 font-bold">S</span>
+            <span class="text-lg font-semibold text-zinc-100">Stella</span>
+        </a>
+        <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-6 text-sm">
+            <div>
+                <p class="px-2 mb-2 text-xs uppercase tracking-wider text-zinc-500">Core</p>
+                <a href="/webui" class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-zinc-800 text-zinc-300">
+                    <span class="text-pink-400">◆</span> Dashboard
+                </a>
+                <a href="/webui/profiles" class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-zinc-800 text-zinc-300">
+                    <span class="text-pink-400">◆</span> Profiles
+                </a>
+            </div>
+            @foreach (var plugin in pageItems)
+            {
+                @if (plugin.Pages.Count > 0)
+                {
+                    <div>
+                        <p class="px-2 mb-2 text-xs uppercase tracking-wider text-zinc-500">@plugin.Name</p>
+                        @foreach (var pg in plugin.Pages)
+                        {
+                            <a href="/webui/p/@plugin.Id/@pg.Slug" class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-zinc-800 text-zinc-300">
+                                <span class="text-pink-400">◇</span> @pg.Title
+                            </a>
+                        }
+                    </div>
+                }
+            }
+        </nav>
+        <div class="border-t border-zinc-800 px-3 py-3 text-xs text-zinc-500">
+            <form method="post" action="/webui/logout">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="hover:text-pink-300">Sign out</button>
+            </form>
+        </div>
+    </aside>
+    <main class="flex-1 flex flex-col">
+        <header class="h-14 border-b border-zinc-800 bg-zinc-900/40 flex items-center px-6">
+            <h1 class="text-base font-medium text-zinc-100">@ViewData["Title"]</h1>
+        </header>
+        <div class="flex-1 p-6">
+            @RenderBody()
+        </div>
+    </main>
+</div>
+<script src="/webui/js/app.js"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

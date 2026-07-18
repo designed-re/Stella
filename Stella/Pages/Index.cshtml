@@ -1,0 +1,60 @@
+@page "/webui"
+@model Stella.WebUI.Pages.IndexModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="rounded-xl bg-zinc-900/60 border border-zinc-800 p-5">
+        <p class="text-xs uppercase tracking-wider text-zinc-500">Memory</p>
+        <p class="mt-1 text-2xl font-semibold text-pink-300">@Model.Memory</p>
+    </div>
+    <div class="rounded-xl bg-zinc-900/60 border border-zinc-800 p-5">
+        <p class="text-xs uppercase tracking-wider text-zinc-500">Plugins loaded</p>
+        <p class="mt-1 text-2xl font-semibold text-pink-300">@Model.PluginRows.Count</p>
+    </div>
+    <div class="rounded-xl bg-zinc-900/60 border border-zinc-800 p-5">
+        <p class="text-xs uppercase tracking-wider text-zinc-500">WebUI pages</p>
+        <p class="mt-1 text-2xl font-semibold text-pink-300">@Model.PluginRows.Sum(p => p.WebUIPages + p.ProfilePages)</p>
+    </div>
+</div>
+
+<div class="rounded-xl bg-zinc-900/60 border border-zinc-800 overflow-hidden">
+    <div class="px-5 py-4 border-b border-zinc-800">
+        <p class="font-medium text-zinc-100">Plugins</p>
+    </div>
+    <table class="w-full text-sm">
+        <thead class="text-left text-zinc-500 border-b border-zinc-800">
+            <tr>
+                <th class="px-5 py-2 font-medium">Name</th>
+                <th class="px-5 py-2 font-medium">Game code</th>
+                <th class="px-5 py-2 font-medium">Version</th>
+                <th class="px-5 py-2 font-medium">Status</th>
+                <th class="px-5 py-2 font-medium">Pages</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var p in Model.PluginRows)
+        {
+            <tr class="border-b border-zinc-800/60 last:border-0">
+                <td class="px-5 py-3">
+                    <div class="text-zinc-100">@p.Name</div>
+                    <div class="text-xs text-zinc-500">@p.Description</div>
+                </td>
+                <td class="px-5 py-3 text-zinc-400">@p.GameCode</td>
+                <td class="px-5 py-3 text-zinc-400">@p.Version</td>
+                <td class="px-5 py-3">
+                    @if (p.Enabled)
+                    {
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-pink-500/15 text-pink-300">enabled</span>
+                    }
+                    else
+                    {
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-zinc-700/40 text-zinc-400">disabled</span>
+                    }
+                </td>
+                <td class="px-5 py-3 text-zinc-400">@p.WebUIPages / @p.ProfilePages</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

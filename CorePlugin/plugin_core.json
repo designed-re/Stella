@@ -1,6 +1,6 @@
-﻿{
+{
   "enabled": true,
-  "db": "server=localhost;database=stella;user id=stella;password=stella",
+  "db": "Server=127.0.0.1;Port=3306;User ID=stella;Password=stella;Database=stella_core",
   "maintenance": false,
   "register_mode": true,
   "private_mode": false

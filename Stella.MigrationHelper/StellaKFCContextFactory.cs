@@ -12,11 +12,7 @@ public class StellaKFCContextFactory : IDesignTimeDbContextFactory<StellaKFCCont
 {
     public StellaKFCContext CreateDbContext(string[] args)
     {
-        var connStr = Environment.GetEnvironmentVariable("STELLA_KFC_DB");
-        if (string.IsNullOrWhiteSpace(connStr))
-        {
-            connStr = "Server=localhost;Port=3306;User=stella;Password=stella;Database=stella_kfc";
-        }
+        var connStr = "Server=localhost;Port=3306;User=stella;Password=stella;Database=stella_kfc";
 
         var serverVersion = new MariaDbServerVersion(new Version(10, 5, 0));
 

@@ -1,9 +1,14 @@
 {
   "enabled": true,
   "maintenance": false,
-  "db": "server=localhost;database=stella;user id=stella;password=stella",
+  "db": "Server=127.0.0.1;Port=3306;User ID=stella;Password=stella;Database=stella_kfc",
   "unlock_all_songs": true,
   "arena_open": true,
-  "arena_session": 22
+  "arena_no_endtime": true,
+  "arena_session": 22,
+  "arena_station": "None",
+  "unlock_all_navigators": false,
+  "unlock_all_appeal_cards": false,
+  "unlock_all_valk_items": false,
+  "use_blasterpass": true
 }
-

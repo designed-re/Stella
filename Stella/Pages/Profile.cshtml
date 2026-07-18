@@ -1,0 +1,46 @@
+@page "/webui/profile/{refid}"
+@model Stella.WebUI.Pages.ProfileModel
+@{
+    ViewData["Title"] = "Profile";
+}
+<div class="rounded-xl bg-zinc-900/60 border border-zinc-800 p-5 mb-6">
+    <div class="flex items-center justify-between flex-wrap gap-4">
+        <div>
+            <p class="text-xs uppercase tracking-wider text-zinc-500">refid</p>
+            <p class="font-mono text-sm text-zinc-300 mt-0.5">@Model.RefId</p>
+        </div>
+        <div>
+            <p class="text-xs uppercase tracking-wider text-zinc-500">card</p>
+            <p class="font-mono text-sm text-zinc-300 mt-0.5">@Model.CardId</p>
+        </div>
+        <div>
+            <p class="text-xs uppercase tracking-wider text-zinc-500">pass</p>
+            <p class="font-mono text-sm text-zinc-300 mt-0.5">@Model.PassCode</p>
+        </div>
+        <div>
+            <p class="text-xs uppercase tracking-wider text-zinc-500">PASERI</p>
+            <p class="text-sm text-pink-300 mt-0.5 font-medium">@Model.Paseli</p>
+        </div>
+    </div>
+</div>
+
+@if (Model.Tabs.Count == 0)
+{
+    <div class="rounded-xl bg-zinc-900/60 border border-zinc-800 p-8 text-center text-zinc-500">
+        No game profile bound to this card yet.
+    </div>
+}
+else
+{
+    <div class="rounded-xl bg-zinc-900/60 border border-zinc-800 overflow-hidden">
+        <div class="flex border-b border-zinc-800 overflow-x-auto">
+            @foreach (var t in Model.Tabs)
+            {
+                <a href="/webui/profile/@Model.RefId/@t.PluginId/@t.Slug"
+                   class="px-5 py-3 text-sm text-zinc-400 hover:text-pink-300 hover:bg-zinc-800/40 whitespace-nowrap border-b-2 border-transparent">
+                    @t.Title <span class="text-xs text-zinc-600">sv@t.Version</span>
+                </a>
+            }
+        </div>
+    </div>
+}

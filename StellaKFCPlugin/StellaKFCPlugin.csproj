@@ -1,14 +1,27 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
+    <EnableDefaultContentItems>false</EnableDefaultContentItems>
+    <EnableDefaultRazorItems>false</EnableDefaultRazorItems>
   </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Views/**/*.cshtml" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="10.0.9" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.2" />
   </ItemGroup>
 
   <ItemGroup>
@@ -20,7 +33,7 @@
     <None Update="plugin_kfc.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <Content Include="Data\Seed\asphyxia_data.json">
+    <Content Include="Data/Seed/asphyxia_data.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
@@ -29,10 +42,10 @@
 			<PluginFiles Include="$(TargetDir)$(ProjectName).dll" />
 			<PluginFiles Include="$(TargetDir)plugin_kfc.json" />
 		</ItemGroup>
-		<Copy SourceFiles="@(PluginFiles)" DestinationFolder="$(SolutionDir)Stella\bin\Debug\net10.0\plugins\" SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(PluginFiles)" DestinationFolder="$(SolutionDir)Stella/bin/Debug/net10.0/plugins/" SkipUnchangedFiles="true" />
 		<ItemGroup>
-			<SeedFiles Include="$(TargetDir)Data\Seed\asphyxia_data.json" />
+			<SeedFiles Include="$(TargetDir)Data/Seed/asphyxia_data.json" />
 		</ItemGroup>
-		<Copy SourceFiles="@(SeedFiles)" DestinationFolder="$(SolutionDir)Stella\bin\Debug\net10.0\Data\Seed\" SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(SeedFiles)" DestinationFolder="$(SolutionDir)Stella/bin/Debug/net10.0/Data/Seed/" SkipUnchangedFiles="true" />
 	</Target>
 </Project>

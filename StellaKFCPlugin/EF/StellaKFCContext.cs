@@ -97,8 +97,7 @@ namespace StellaKFCPlugin.EF
         /// Resolves the KFC DB connection string once (caching the MariaDB server
         /// version so <c>new StellaKFCContext()</c> does not re-read config / re-detect
         /// the server version on every request). The connection string can be
-        /// overridden through the <c>STELLA_KFC_DB</c> environment variable to avoid
-        /// committing credentials; otherwise <c>plugins/plugin_kfc.json</c> is used.
+        /// resolved from <c>plugins/plugin_kfc.json</c> only (no env vars).
         /// </summary>
         public static (string ConnectionString, MariaDbServerVersion ServerVersion) ResolveConfiguration()
         {
@@ -111,16 +110,14 @@ namespace StellaKFCPlugin.EF
                     return (_cachedConnectionString, _cachedServerVersion!);
 
                 var config = new ConfigurationBuilder()
-                    .AddJsonFile(Path.Combine(Directory.GetCurrentDirectory(), "plugins", "plugin_kfc.json"), optional: true)
+                    .AddJsonFile(ResolvePluginConfigPath("plugin_kfc.json"), optional: true)
                     .Build();
                 var coreConfig = config.Get<StellaKFCPluginConfig>() ?? new StellaKFCPluginConfig();
 
-                var connStr = Environment.GetEnvironmentVariable("STELLA_KFC_DB");
-                if (string.IsNullOrWhiteSpace(connStr))
-                    connStr = coreConfig.DbConnectionString;
+                var connStr = coreConfig.DbConnectionString;
                 if (string.IsNullOrWhiteSpace(connStr))
                     throw new InvalidOperationException(
-                        "StellaKFCPlugin DB connection string is not configured. Set the STELLA_KFC_DB environment variable or plugins/plugin_kfc.json.");
+                        "StellaKFCPlugin DB connection string is not configured. Set the \"db\" field in plugins/plugin_kfc.json.");
 
                 _cachedConnectionString = connStr;
                 _cachedServerVersion = new MariaDbServerVersion(ServerVersion.AutoDetect(connStr));
@@ -1115,5 +1112,17 @@ namespace StellaKFCPlugin.EF
                 entity.Property(e => e.Param).HasColumnType("int(11)").HasColumnName("param");
             });
         }
+        /// <summary>
+        /// Resolves a plugin config file under plugins/, checking the current
+        /// working directory first (production/Docker app root) then the host
+        /// assembly base directory (bin output when running via `dotnet run`).
+        /// </summary>
+        public static string ResolvePluginConfigPath(string fileName)
+        {
+            var cwd = Path.Combine(Directory.GetCurrentDirectory(), "plugins", fileName);
+            if (File.Exists(cwd)) return cwd;
+            return Path.Combine(AppContext.BaseDirectory, "plugins", fileName);
+        }
+
     }
 }

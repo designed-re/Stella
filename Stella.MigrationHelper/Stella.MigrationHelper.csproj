@@ -17,4 +17,23 @@
     <ProjectReference Include="..\StellaKFCPlugin\StellaKFCPlugin.csproj" />
   </ItemGroup>
 
+  <!--
+    Design-time host for `dotnet ef`. It must NOT ship a plugins/ folder of its
+    own: a source plugins/ folder here gets globbed by the Web SDK as content
+    and copied into the output, and the copy then gets re-globbed on the next
+    build, producing bin/Debug/net10.0/bin/Debug/... infinite nesting.
+    - Remove any plugins/ glob so a stray folder can't seed recursion.
+    - Provide the KFC config as a single linked file in the output plugins/
+      dir so StellaKFCContext.ResolveConfiguration() can find it if this host
+      is ever run directly (dotnet ef uses StellaKFCContextFactory instead).
+  -->
+  <ItemGroup>
+    <Content Remove="plugins/**" />
+    <None Remove="plugins/**" />
+    <None Include="..\StellaKFCPlugin\plugin_kfc.json">
+      <Link>plugins\plugin_kfc.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
