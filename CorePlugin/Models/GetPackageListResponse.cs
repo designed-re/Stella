@@ -9,6 +9,9 @@ namespace CorePlugin.Models
         [XmlElement(ElementName = "item")]
         public List<PackageItem> Items { get; set; } = new();
 
+        [XmlAttribute(AttributeName = "status")]
+        public string Status { get; set; } = "0";
+
         [XmlAttribute(AttributeName = "expire")]
         public int Expire { get; set; }
 

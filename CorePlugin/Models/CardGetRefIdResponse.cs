@@ -6,6 +6,9 @@ namespace CorePlugin.Models
     [XmlRoot(ElementName = "cardmng")]
     public class CardGetRefIdResponse : IStellaEAmuseResponse
     {
+        [XmlAttribute(AttributeName = "status")]
+        public string Status { get; set; } = "0";
+
         [XmlAttribute(AttributeName = "dataid")]
         public string DataId { get; set; }
 
