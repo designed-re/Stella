@@ -70,37 +70,39 @@ namespace StellaKFCPlugin.Handlers
                 var egSongsLocked = gameVersion == 7 ? provider.GetEgSongsLocked() : Array.Empty<SvEgSongLockedCategory>();
                 var kfcConfig = PluginConfig as StellaKFCPluginConfig ?? new StellaKFCPluginConfig();
 
-                // Information notices -> extend type 1 entries (asphyxia common.ts L345-365).
+                // asphyxia common.ts L75/L102: EXTENDS6/7 entries (filtered by
+                // checkVerStart) are pushed to `extend` FIRST — this includes kac
+                // (type 6), demo videos (type 21), megamix (type 17, id 91..94) and
+                // blaster-gate (type 18). Previously Stella only emitted megamix and
+                // dropped every other EXTENDS entry (kac/demo/blaster-gate were
+                // seeded into sv_static_extend but never read).
+                foreach (var ex in provider.GetExtends().Where(e => CheckVerStart(dVersion, e.MinVersion, e.StartDate, date)))
+                {
+                    extend.Add(new ExtendInfoRaw
+                    {
+                        Id = (int)ex.ExtendId, Type = (int)ex.ExtendType,
+                        Params = new object[] { ex.ParamNum1, ex.ParamNum2, ex.ParamNum3, ex.ParamNum4, ex.ParamNum5, ex.ParamStr1, ex.ParamStr2, ex.ParamStr3, ex.ParamStr4, ex.ParamStr5 },
+                    });
+                }
+
+                // Information notices -> extend type 1 entries (asphyxia common.ts L358-365).
+                long infoTime = KfcVersion.UnixMs(date.ToUniversalTime()) / 100000 * 100;
                 foreach (var info in information.Where(i => CheckVerStart(dVersion, i.MinVersion, i.StartDate, date)))
                 {
-                    // asphyxia common.ts L346: parseInt(date.getTime()/100000) * 100
-                    long currentTime = KfcVersion.UnixMs(date.ToUniversalTime()) / 100000 * 100;
                     extend.Add(new ExtendInfoRaw
                     {
                         Id = info.InfoId, Type = 1,
-                        Params = new object[] { 1, currentTime, 0, 0, 0, "[f:0]SERVER INFORMATION", info.InfoStr, "", "", "" },
+                        Params = new object[] { 1, infoTime, 0, 0, 0, "[f:0]SERVER INFORMATION", info.InfoStr, "", "", "" },
                     });
                 }
 
-                // Megamix extends (asphyxia megamix1..4 -> extend type 17, id 91..94).
-                var megamix = provider.GetMegamix();
-                uint extendId = 91;
-                foreach (var m in megamix.OrderBy(x => x.MegamixNo))
+                // Notification extend (Stella free-software banner; appended last so
+                // it never reorders asphyxia's EXTENDS/information entries).
                 {
-                    extend.Add(new ExtendInfoRaw
-                    {
-                        Id = extendId++, Type = 17,
-                        Params = new object[] { 0, 0, 0, 0, 0, m.SongIds, "", "", "", "" },
-                    });
-                }
-
-                // Notification extend (free-software banner).
-                {
-                    long now = KfcVersion.UnixMs(date.ToUniversalTime());
                     extend.Add(new ExtendInfoRaw
                     {
                         Id = 1, Type = 1,
-                        Params = new object[] { 1, KfcVersion.UnixMs(date.ToUniversalTime())/100000, 0, 0, 0, $"[f:0] NOTIFICATION\nFREE SOFTWARE\n{date:s}", "", "", "", "" },
+                        Params = new object[] { 1, infoTime, 0, 0, 0, $"[f:0] NOTIFICATION\nFREE SOFTWARE\n{date:s}", "", "", "", "" },
                     });
                 }
 
