@@ -393,7 +393,15 @@ namespace Stella.Util
             if (!string.IsNullOrEmpty(propertyName))
             {
                 var lower = propertyName.ToLowerInvariant();
-                if (lower == "ip" || lower == "gip" || lower == "lip" ||
+                // asphyxia uses K.ITEM('4u8', [...]) for gip/lip arrays in entry_s
+                // responses (space-separated u8 values). The ip4 type expects a
+                // dot-separated address string (used by facility.get globalip via
+                // the value-based IsValidIPv4 check below), so gip/lip must use 4u8.
+                if (lower == "gip" || lower == "lip")
+                {
+                    return "4u8";
+                }
+                if (lower == "ip" ||
                     lower.EndsWith("_ip") || lower.EndsWith("ipaddr") ||
                     lower.EndsWith("ip_addr"))
                 {
