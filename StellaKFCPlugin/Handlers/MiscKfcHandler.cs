@@ -102,9 +102,18 @@ namespace StellaKFCPlugin.Handlers
             var profile = await db.SvProfiles.SingleOrDefaultAsync(x => x.RefId == request.RefId && x.Version == gameVersion);
             if (profile is null) return new BuyResponse { Status = "1" };
 
-            // asphyxia buy: currency_type true=blocks, false=packets.
-            // growth[currency] - cost; only apply when balance + change >= 0 ($gte guard).
-            int cost = (int)(request.ItemElement.Items?.Sum(i => (long)i.Price) ?? 0);
+            // asphyxia buy (profiles.ts L1130-1162): the game sends <item> with
+            // FLAT __count arrays (item.item_type / item.item_id / item.param /
+            // item.price), NOT <item><info>...</info></item>. asphyxia zips the
+            // four arrays with _.zipWith. PreprocessXmlForArrays expands each
+            // __count array into repeated elements, so List<int>/List<uint>
+            // collects them in order. cost = sum of all prices.
+            var itemTypes = request.ItemElement.ItemTypes;
+            var itemIds = request.ItemElement.ItemIds;
+            var itemParams = request.ItemElement.Params;
+            var prices = request.ItemElement.Prices;
+            int count = new[] { itemTypes.Count, itemIds.Count, itemParams.Count, prices.Count }.Min();
+            int cost = prices.Sum();
             int earnedBlocks = request.EarnedGamecoinBlock;
             int earnedPackets = request.EarnedGamecoinPacket;
 
@@ -124,16 +133,19 @@ namespace StellaKFCPlugin.Handlers
             }
 
             // Save items
-            if (request.ItemElement.Items != null)
+            if (count > 0)
             {
-                foreach (var item in request.ItemElement.Items)
+                for (int i = 0; i < count; i++)
                 {
+                    var itemType = itemTypes[i];
+                    var itemId = itemIds[i];
+                    var itemParam = itemParams[i];
                     var rec = await db.SvItems.AsNoTracking().SingleOrDefaultAsync(x =>
-                        x.Profile == profile.Id && x.ItemId == item.ItemId && x.Type == item.ItemType && x.Version == gameVersion);
+                        x.Profile == profile.Id && x.ItemId == itemId && x.Type == (byte)itemType && x.Version == gameVersion);
                     if (rec is null)
-                        await db.SvItems.AddAsync(new SvItem { ItemId = item.ItemId, Param = item.Param, Type = (byte)item.ItemType, Profile = profile.Id, Version = gameVersion });
+                        await db.SvItems.AddAsync(new SvItem { ItemId = itemId, Param = itemParam, Type = (byte)itemType, Profile = profile.Id, Version = gameVersion });
                     else
-                        db.SvItems.Update(new SvItem { Id = rec.Id, ItemId = item.ItemId, Param = item.Param, Type = (byte)item.ItemType, Profile = profile.Id, Version = gameVersion });
+                        db.SvItems.Update(new SvItem { Id = rec.Id, ItemId = itemId, Param = itemParam, Type = (byte)itemType, Profile = profile.Id, Version = gameVersion });
                 }
             }
 
@@ -215,23 +227,17 @@ namespace StellaKFCPlugin.Handlers
 
     public class BuyItemElement
     {
-        [XmlElement(ElementName = "info")]
-        public List<BuyItem> Items { get; set; } = new();
-    }
-
-    public class BuyItem
-    {
         [XmlElement(ElementName = "item_type")]
-        public int ItemType { get; set; }
+        public List<int> ItemTypes { get; set; } = new();
 
         [XmlElement(ElementName = "item_id")]
-        public uint ItemId { get; set; }
+        public List<uint> ItemIds { get; set; } = new();
 
         [XmlElement(ElementName = "param")]
-        public uint Param { get; set; }
+        public List<uint> Params { get; set; } = new();
 
         [XmlElement(ElementName = "price")]
-        public int Price { get; set; }
+        public List<int> Prices { get; set; } = new();
     }
 
     [XmlRoot(ElementName = "game")]
