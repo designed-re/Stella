@@ -101,24 +101,27 @@ namespace CorePlugin.Handlers
                     Latitude = "1273",
                     Longitude = "361"
                 },
-                Share = new Share
-                {
-                    EaCoin = new EaCoin
-                    {
-                        NotchAmount = 0,
-                        NotchCount = 0,
-                        SupplyLimit = 100000
-                    },
-                    Url = new Url
-                    {
-                        EaPass = "STELLA-UNIVERSE",
-                        ArcadeFan = "STELLA-UNIVERSE",
-                        KonaminetDx = "STELLA-UNIVERSE",
-                        KonamiId = "STELLA-UNIVERSE",
-                        EaGate = "STELLA-UNIVERSE"
-                    }
-                }
-            };
+               Share = new Share
+               {
+                   EaCoin = new EaCoin
+                   {
+                       NotchAmount = 0,
+                       NotchCount = 0,
+                       SupplyLimit = 100000
+                   },
+                   Url = new Url
+                   {
+                       EaPass = "STELLA-UNIVERSE",
+                       ArcadeFan = "STELLA-UNIVERSE",
+                       KonaminetDx = "STELLA-UNIVERSE",
+                       KonamiId = "STELLA-UNIVERSE",
+                       EaGate = "STELLA-UNIVERSE"
+                   }
+               }
+                ,
+                // asphyxia send.object always merges status=0 into @attr.
+                Status = "0"
+           };
         }
     }
 }
