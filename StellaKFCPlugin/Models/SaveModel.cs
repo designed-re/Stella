@@ -46,8 +46,8 @@ namespace StellaKFCPlugin.Models
         [XmlElement(ElementName = "earned_blaster_energy")]
         public int EarnedBlasterEnergy { get; set; }
 
-        [XmlElement(ElementName = "variant_gate")]
-        public SaveVariantGate VariantGate { get; set; } = new();
+       [XmlElement(ElementName = "variant_gate")]
+        public SaveVariantGate? VariantGate { get; set; }
 
         [XmlElement(ElementName = "arena")]
         public List<SaveArena> ArenaList { get; set; } = new();
@@ -160,12 +160,12 @@ namespace StellaKFCPlugin.Models
         public SaveEarnedElement EarnedElement { get; set; } = new();
 
         [XmlElement(ElementName = "over_radar")]
-        public string OverRadarRaw { get; set; } = string.Empty;
-
-        [XmlIgnore]
-        public List<int> OverRadar => OverRadarRaw
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            .Select(int.Parse).ToList();
+        // The game sends over_radar as a KBinJSON array (__type="s32" __count="N"
+        // with space-joined values). PluginService.PreprocessXmlForArrays
+        // expands __count arrays into N separate <over_radar> elements before
+        // XmlSerializer runs, so a single string field would only capture the
+        // first value. List<int> collects every expanded element instead.
+        public List<int> OverRadar { get; set; } = new();
     }
 
     public class SaveArena
@@ -290,6 +290,4 @@ namespace StellaKFCPlugin.Models
         public string Status { get; set; } = "0";
     }
 }
-
-
 

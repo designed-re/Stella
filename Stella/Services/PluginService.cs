@@ -290,48 +290,55 @@ namespace Stella.Services
                     // Split the space-separated values
                     var values = child.Value.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
-                    if (values.Length > 0)
+                   if (values.Length > 0)
+                   {
+                       // Create new elements for each value
+                       var elementName = child.Name.LocalName;
+                       var parentElement = child.Parent;
+
+                       // Get the index of current element
+                       var siblings = parentElement.Elements(elementName).ToList();
+                       var currentIndex = siblings.IndexOf(child);
+
+                       // Remove the original element
+                       child.Remove();
+
+                       // Insert new elements with individual values
+                       XElement insertAfter = currentIndex > 0 ? siblings[currentIndex - 1] : null;
+
+                       foreach (var value in values)
+                       {
+                           var newElement = new XElement(child.Name, value);
+
+                           // Copy attributes except __count
+                           foreach (var attr in child.Attributes())
+                           {
+                               if (attr.Name.LocalName != "__count")
+                               {
+                                   newElement.Add(new XAttribute(attr.Name, attr.Value));
+                               }
+                           }
+
+                           if (insertAfter == null)
+                           {
+                               parentElement.AddFirst(newElement);
+                           }
+                           else
+                           {
+                               insertAfter.AddAfterSelf(newElement);
+                           }
+
+                           insertAfter = newElement;
+                       }
+                   }
+                    else
                     {
-                        // Create new elements for each value
-                        var elementName = child.Name.LocalName;
-                        var parentElement = child.Parent;
-
-                        // Get the index of current element
-                        var siblings = parentElement.Elements(elementName).ToList();
-                        var currentIndex = siblings.IndexOf(child);
-
-                        // Remove the original element
+                        // Empty array (__count="0" or whitespace-only text). Remove
+                        // the element so a target List<int>/List<uint> stays empty
+                        // instead of throwing FormatException parsing "" as a number.
                         child.Remove();
-
-                        // Insert new elements with individual values
-                        XElement insertAfter = currentIndex > 0 ? siblings[currentIndex - 1] : null;
-
-                        foreach (var value in values)
-                        {
-                            var newElement = new XElement(child.Name, value);
-
-                            // Copy attributes except __count
-                            foreach (var attr in child.Attributes())
-                            {
-                                if (attr.Name.LocalName != "__count")
-                                {
-                                    newElement.Add(new XAttribute(attr.Name, attr.Value));
-                                }
-                            }
-
-                            if (insertAfter == null)
-                            {
-                                parentElement.AddFirst(newElement);
-                            }
-                            else
-                            {
-                                insertAfter.AddAfterSelf(newElement);
-                            }
-
-                            insertAfter = newElement;
-                        }
                     }
-                }
+               }
                 else
                 {
                     // Recursively process child elements

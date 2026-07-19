@@ -492,11 +492,11 @@ public class Sv3SaveParamInfo
     public int Id { get; set; }
 
     [XmlElement(ElementName = "param")]
-    public string ParamRaw { get; set; } = string.Empty;
-
-    [XmlIgnore]
-    public List<int> Param => ParamRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-        .Select(s => int.TryParse(s, out var v) ? v : 0).ToList();
+    // The game sends param as a KBinJSON __count array (space-joined s32).
+    // PluginService.PreprocessXmlForArrays expands __count arrays into N
+    // separate <param> elements before XmlSerializer runs, so a single string
+    // field would only capture the first value. List<int> collects them all.
+    public List<int> Param { get; set; } = new();
 }
 
 [XmlRoot(ElementName = "pb")]
