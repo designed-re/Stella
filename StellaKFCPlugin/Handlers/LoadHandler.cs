@@ -168,8 +168,14 @@ namespace StellaKFCPlugin.Handlers
                 DrawAdjust = profile.DrawAdjust,
                 EffCLeft = profile.EffCLeft,
                 EffCRight = profile.EffCRight,
-                NarrowDown = profile.NarrowDown,
-                KacId = profile.KacId,
+               NarrowDown = profile.NarrowDown,
+                // asphyxia load.pug L85 renders `kac_id(__type="str") #{name}`
+                // where `name` is profile.name (via the `...profile` spread in the
+                // pug render call). asphyxia does not track a separate KAC id, so
+                // kac_id always equals the profile NAME. Match that byte-for-byte
+                // (using profile.KacId would diverge whenever the player's name
+                // differs from the seeded "VOLTEX" default).
+                KacId = profile.Name,
                 SkillLevel = skill.Level,
                 SkillBaseId = skill.Base,
                 SkillNameId = skill.Name,
