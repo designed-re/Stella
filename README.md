@@ -1,17 +1,20 @@
 # Stella
 
-Stella is an **unofficial implementation of Konami's e-amusement server**.
+Stella is an **unofficial implementation of Konami's e-amusement server**: a .NET 10 ASP.NET Core app with a plugin-based architecture and a built-in admin WebUI.
 
 ## Features
-- Partial implementation of e-amusement protocol
-- Data exchange between client and server
-- Modular and extensible architecture
-- Plugin support
-- SOUND VOLTEX EXCEED GEAR (sv6) + NABLA (sv7) unified handler support
-- Automatic v6→v7 profile migration
+
+- e-amusement wire protocol (KBinXML, LZ77, RC4) with `/eamuse` + `/core` POST routes
+- Plugin architecture — drop a plugin DLL + `plugin_<name>.json` into `plugins/` and it loads at runtime
+- Built-in **admin WebUI** at `/webui` (server-rendered Razor, dark theme + pastel-pink accent, Tailwind), extensible per-plugin
+- SOUND VOLTEX support: EXCEED GEAR (sv6) + NABLA (sv7) unified handlers, plus GRAVITY WARS (sv3) via `game_3.*` routes
+- Automatic v6→v7 (EG→∇) profile migration
+- **JSON-only configuration** — no environment variables (self-hosted and Docker friendly)
 - Docker Compose one-command deployment
 
 ## Plugins
+
+Plugins load at runtime from `plugins/`. Each implements `IStellaPlugin` (in `Stella.Abstractions`) and registers handlers with `[StellaHandler(service, module, typeof(Request))]`. Game plugins implement `IStellaGamePlugin` to contribute profile tabs to the WebUI. See `AGENTS.md` for the full plugin/handler contract and the asphyxia parity rules.
 
 ### Core Plugin
 Built-in handlers shared across all games.
@@ -22,29 +25,23 @@ Built-in handlers shared across all games.
 | `cardmng` | `getrefid` | Get/create refid for card |
 | `cardmng` | `authpass` | Authenticate card password |
 | `cardmng` | `bindmodel` | Bind profile to game code |
-| `eacoin` | `checkin` | PASELI session start |
-| `eacoin` | `consume` | PASELI payment |
-| `eacoin` | `checkout` | PASELI session end |
+| `eacoin` | `checkin` / `consume` / `checkout` | PASELI session |
 | `facility` | `get` | Facility/cabinet info |
-| `services` | `get` | Server URL list (keepalive, all endpoints) |
+| `services` | `get` | Server URL list (core services + every registered plugin service prefix, discovered dynamically) |
 | `message` | `get` | Server messages |
 | `package` | `list` | Package list |
-| `pcbevent` | `put` | PCB event |
-| `pcbtracker` | `alive` | PCB keepalive |
+| `pcbevent` | `put` / `pcbtracker` `alive` | PCB keepalive |
 | `eventlog` | `write` | Event log |
-| `tax` | `get_phase` | Tax phase (stub: phase=0) |
-| `dlstatus` | `progress` | Download status (stub) |
-| `posevent` | `income.sales.sale` | POS event (stub) |
-| `ins` | `netlog` | Net log (stub) |
+| `tax` | `get_phase` / `dlstatus` `progress` / `posevent` `income.sales.sale` / `ins` `netlog` | Stubs |
 
 ### KFC Plugin (SOUND VOLTEX)
-All handlers serve both sv6 (EXCEED GEAR) and sv7 (NABLA) from unified classes.
+Unified sv6 (EXCEED GEAR) + sv7 (NABLA) handlers, plus sv3 (GRAVITY WARS) via separate `Sv3*Handler` classes registered under `game_3.*`. Each sv6/sv7 handler branches on the game version derived from the e-amusement `model` string.
 
 | Service | Method | Description |
 |---|---|---|
 | `game` | `sv6_common` / `sv7_common` | Events, courses, valgene, apigene, arena, extend, music_limited |
 | `game` | `sv6_new` / `sv7_new` | Create profile (v7 triggers ViiMigrate if v6 exists) |
-| `game` | `sv6_load` / `sv7_load` | Load profile (items, params, courses, arena, variant_gate, etc.) |
+| `game` | `sv6_load` / `sv7_load` | Load profile (items, params, courses, arena, variant_gate, …) |
 | `game` | `sv6_load_m` / `sv7_load_m` | Load scores (v6=21 params, v7=26 params with volforce) |
 | `game` | `sv6_load_r` / `sv7_load_r` | Load rival data |
 | `game` | `sv6_save` / `sv7_save` | Save profile + items + params + skill + arena + variant_gate |
@@ -53,27 +50,23 @@ All handlers serve both sv6 (EXCEED GEAR) and sv7 (NABLA) from unified classes.
 | `game` | `sv6_save_e` / `sv7_save_e` | Save extra (weekly music) |
 | `game` | `sv6_save_pb` / `sv7_save_pb` | Save policy break |
 | `game` | `sv6_save_valgene` / `sv7_save_valgene` | Save valgene (gacha) items |
-| `game` | `sv6_save_mega` / `sv7_save_mega` | Stub |
-| `game` | `sv6_frozen` / `sv7_frozen` | Stub |
 | `game` | `sv6_buy` / `sv7_buy` | Purchase items with gamecoin |
 | `game` | `sv6_print` / `sv7_print` | Print genesis cards |
 | `game` | `sv6_hiscore` / `sv7_hiscore` | All-time high scores |
 | `game` | `sv6_lounge` / `sv7_lounge` | Online matchmaking lounge |
 | `game` | `sv6_shop` / `sv7_shop` | Shop (returns nxt_time) |
-| `game` | `sv6_play_e` / `sv7_play_e` | Stub |
-| `game` | `sv6_play_s` / `sv7_play_s` | Stub |
 | `game` | `sv6_entry_s` / `sv7_entry_s` | Online matchmaking (in-memory room system) |
-| `game` | `sv6_entry_e` / `sv7_entry_e` | Entry end (stub) |
-| `game` | `sv6_exception` / `sv7_exception` | Stub |
-| `game` | `sv6_log` / `sv7_log` | Stub |
+| `game` | `sv6_save_mega` / `sv7_save_mega`, `sv6_frozen` / `sv7_frozen`, `sv6_play_e` / `sv7_play_e`, `sv6_play_s` / `sv7_play_s`, `sv6_entry_e` / `sv7_entry_e`, `sv6_exception` / `sv7_exception`, `sv6_log` / `sv7_log` | Stubs |
+| `game_3` | `new` / `load` / `save` / `save_m` / `save_c` / `save_pb` / `common` / `load_r` | GRAVITY WARS (sv3) |
 
-**Total: 66 handlers** (18 core + 48 KFC)
+The total handler count grows as plugins are added; it is logged at startup (`Total handlers cached:`). `services.get` is built dynamically from the registered handlers, so new plugins are advertised automatically.
 
 ## Requirements
+
 - .NET SDK 10
-- Supported OS: Windows, Linux
 - MariaDB 10.5+ / MySQL 8+
-- `KBinXml.Net` git submodule (commit 73d1b9a) — do NOT replace with NuGet package
+- `KBinXml.Net` git submodule (commit 73d1b9a) — do NOT replace with the NuGet package (the NuGet 2.1.3 lacks the ASCII `0x20` encoding some requests need)
+- Node.js only if you want to regenerate the WebUI Tailwind CSS (`Stella.WebUI.Assets/`, `npm run build`) — the built CSS is committed, so this is optional
 
 ## Quick Start (Docker)
 
@@ -83,44 +76,40 @@ cd stella
 docker compose up --build
 ```
 
-The server listens on `http://localhost:8080`. MariaDB starts alongside with `stella_kfc` and `stella_core` databases pre-created. EF migrations and static-data seeding run automatically on first boot.
+The server listens on `http://localhost:8080`. MariaDB starts alongside with `stella_kfc` and `stella_core` databases pre-created (`docker/init-db.sql`). EF migrations run automatically on first boot.
 
-### Configuration (env vars)
+### First-time setup (WebUI)
 
-| Env var | Default | Description |
-|---|---|---|
-| `STELLA_KFC_DB` | `Server=db;...Database=stella_kfc` | KFC plugin DB connection |
-| `STELLA_CORE_DB` | `Server=db;...Database=stella_core` | Core plugin DB connection |
-| `STELLA_SERVER_URL` | `http://10.0.1.133:8080/eamuse` | Base URL returned by `services.get` |
-| `STELLA_SERVER_HOST` | `10.0.1.133` | Keepalive host |
-| `STELLA_KFC_UNLOCK_ALL_SONGS` | `true` | Unlock all songs |
-| `STELLA_KFC_ARENA_OPEN` | `true` | Keep arena open |
-| `STELLA_KFC_ARENA_NO_ENDTIME` | `true` | Arena no end time |
-| `STELLA_KFC_ARENA_SESSION` | `22` | Arena session set |
-| `STELLA_KFC_ARENA_STATION` | `None` | Arena station set |
-| `STELLA_KFC_USE_BLASTERPASS` | `true` | Use BLASTER PASS |
-| `STELLA_KFC_UNLOCK_ALL_NAVIGATORS` | `false` | Unlock navigators |
-| `STELLA_KFC_UNLOCK_ALL_APPEAL_CARDS` | `false` | Unlock appeal cards |
-| `STELLA_KFC_UNLOCK_ALL_VALK_ITEMS` | `false` | Unlock customization items |
+1. Open `http://localhost:8080/webui` and sign in with the password `stella` (set in `docker/appsettings.json`).
+2. Go to **StellaKFCPlugin → Data** and click **Seed static data** (loads `sv_static_*` from `asphyxia_data.json`).
+3. On the same page, **Upload** your `music_db.xml` (shift_jis, ~8.4MB) to populate `sv_music`, or use **Reload from disk** if one was baked into the image.
 
-### music_db.xml
+Static-data seeding and `music_db.xml` loading are **not** done at startup anymore — they are on-demand from the WebUI so you control when they happen.
 
-The KFC plugin loads `Data/Seed/music_db.xml` (shift_jis, ~8.4MB) into the `sv_music` table at startup. This file is NOT committed (too large). Provide it via docker-compose volume mount:
+### Configuration (JSON-only — no env vars)
 
-```yaml
-volumes:
-  - ./StellaKFCPlugin/Data/Seed/music_db.xml:/app/Data/Seed/music_db.xml:ro
-```
+Edit the mounted files on the host and restart the container (`docker compose restart stella`):
 
-Or place it in `StellaKFCPlugin/Data/Seed/music_db.xml` locally.
+| File | Purpose |
+|---|---|
+| `docker/appsettings.json` | `Urls`, `Stella.ServerUrl` / `ServerHost` / `KeepaliveUrl`, `WebUI.Enabled` / `WebUI.Password` |
+| `docker/plugin_core.json` | Core plugin: `db` connection string, `maintenance`, `register_mode`, `private_mode` |
+| `docker/plugin_kfc.json` | KFC plugin: `db` connection string + toggles (`unlock_all_songs`, `arena_open`, `arena_session`, `use_blasterpass`, …) |
 
-## Manual Build & Run (without Docker)
+`Stella.ServerUrl` should be the URL the cabinet can reach the server at (e.g. `http://10.0.1.133:8080/eamuse`); it is returned by `services.get`. The WebUI and e-amusement routes share the same port.
+
+### Volumes
+
+- `stella-db` — MariaDB data
+- `stella-seed` — mounted at `/app/Data/Seed`; persists `asphyxia_data.json`, `events_list.json`, and uploaded `music_db.xml` across container recreation (Docker copies the image's seed assets into the volume on first boot)
+
+## Self-hosted (without Docker)
 
 ### 1. Prerequisites
 
-- .NET SDK 10 (`dotnet --version` should report 10.x)
+- .NET SDK 10 (`dotnet --version` reports 10.x)
 - MariaDB or MySQL running and accessible
-- `dotnet-ef` tool installed:
+- `dotnet-ef` (only for generating new migrations):
   ```bash
   dotnet tool install --global dotnet-ef --version 10.0.2
   ```
@@ -130,10 +119,7 @@ Or place it in `StellaKFCPlugin/Data/Seed/music_db.xml` locally.
 ```bash
 git clone --recurse-submodules <repo-url>
 cd stella
-```
-
-If you forgot `--recurse-submodules`:
-```bash
+# if you forgot --recurse-submodules:
 git submodule update --init --recursive
 ```
 
@@ -148,29 +134,15 @@ GRANT ALL PRIVILEGES ON stella_core.* TO 'stella'@'%';
 FLUSH PRIVILEGES;
 ```
 
-### 4. Configure plugin configs
+### 4. Configure
 
-Copy the example configs and edit the DB connection strings:
+Self-hosted defaults are already committed in `CorePlugin/plugin_core.json` and `StellaKFCPlugin/plugin_kfc.json` (`Server=127.0.0.1`). Edit them in place — there are **no environment variables**. Each plugin reads `plugins/plugin_<name>.json` (resolved from the working dir, then the app base directory). Host-level options live in `Stella/appsettings.json` (`Urls`, `Stella.*`, `WebUI.*`).
 
-```bash
-cp CorePlugin/plugin_core.example.json Stella/bin/Debug/net10.0/plugins/plugin_core.json
-cp StellaKFCPlugin/plugin_kfc.example.json Stella/bin/Debug/net10.0/plugins/plugin_kfc.json
-```
-
-Edit `plugin_core.json`:
+`plugin_kfc.json`:
 ```json
 {
   "enabled": true,
-  "db": "server=localhost;port=3306;database=stella_core;user id=stella;password=stella",
-  "maintenance": false
-}
-```
-
-Edit `plugin_kfc.json`:
-```json
-{
-  "enabled": true,
-  "db": "server=localhost;port=3306;database=stella_kfc;user id=stella;password=stella",
+  "db": "Server=127.0.0.1;Port=3306;User ID=stella;Password=stella;Database=stella_kfc",
   "unlock_all_songs": true,
   "arena_open": true,
   "arena_no_endtime": true,
@@ -180,62 +152,50 @@ Edit `plugin_kfc.json`:
 }
 ```
 
-Alternatively, use environment variables instead of JSON files:
-```bash
-export STELLA_KFC_DB="server=localhost;port=3306;database=stella_kfc;user id=stella;password=stella"
-export STELLA_CORE_DB="server=localhost;port=3306;database=stella_core;user id=stella;password=stella"
-export STELLA_SERVER_URL="http://YOUR_SERVER_IP:8080/eamuse"
-export STELLA_SERVER_HOST="YOUR_SERVER_IP"
-```
+Set `Stella.ServerUrl` in `Stella/appsettings.json` to the URL the cabinet will reach (e.g. `http://YOUR_SERVER_IP:80/eamuse`).
 
-### 5. Place music_db.xml
-
-```bash
-# Place music_db.xml (shift_jis, ~8.4MB) in the seed directory
-cp /path/to/music_db.xml StellaKFCPlugin/Data/Seed/music_db.xml
-```
-
-### 6. Build
+### 5. Build
 
 ```bash
 dotnet build Stella.slnx
 ```
 
-### 7. Apply migrations (optional — server does this automatically)
+Each plugin's PostBuild target copies its DLL + `plugin_*.json` into `Stella/bin/Debug/net10.0/plugins/`.
+
+### 6. Run
 
 ```bash
-dotnet ef database update --project StellaKFCPlugin --startup-project Stella.MigrationHelper
-```
-
-### 8. Run
-
-```bash
-# Default port 80
+# Development (uses appsettings.Development.json -> http://localhost:8080)
 dotnet run --project Stella
-
-# Or specify a port
-ASPNETCORE_URLS=http://+:8080 dotnet run --project Stella
 ```
 
-The server will:
-1. Apply EF migrations (`Database.Migrate()`)
-2. Seed `sv_static_*` tables from `Data/Seed/asphyxia_data.json`
-3. Load `music_db.xml` into `sv_music`
+On startup the server applies EF migrations (`Database.Migrate()`). Then open `http://localhost:8080/webui`, sign in (`stella`), and seed static data / upload `music_db.xml` from the **Data** page.
 
-### 9. Verify
+### 7. Verify
 
 ```bash
-curl http://localhost:8080/
-# HTTP 404 is normal (server only handles POST to /eamuse and /core)
+curl -s http://localhost:8080/webui/login -o /dev/null -w "%{http_code}\n"  # 200
+# A GET to /eamuse or / returns 404 — those are POST-only e-amusement routes.
 ```
 
-## KFC Plugin — EXCEED GEAR + NABLA
+## WebUI
 
-The KFC plugin serves both sv6 (EXCEED GEAR) and sv7 (NABLA) from unified handler classes. Each handler method branches on the game version derived from the e-amusement `model` string.
+The admin WebUI at `/webui` is server-rendered Razor (dark theme, Tailwind, pastel-pink/magenta accent). It is designed to be extended by plugins, not just the host.
+
+- **Auth**: cookie auth, password in `WebUI.Password` (`appsettings.json`). 12h sliding session.
+- **Host pages**: dashboard, profiles, login/logout.
+- **Plugin pages**: each plugin can contribute top-level pages and profile tabs via `IStellaPlugin.WebUIPages` / `ProfilePages` + `RenderWebUIPageAsync` / `RenderProfileTabAsync`. The KFC plugin contributes Data, Songs List, Startup Flags, Unlock Events, Weekly Score Attack, and profile tabs (Detail, Score, Skill, Achievements, Rivals, Customization, Valkyrie/Premium generators).
+- **AJAX**: `POST /webui/api/emit/<pluginId>/<event>` (auth + antiforgery protected). Views call it via `Stella.emit(...)`.
+
+Plugin views are embedded Razor, runtime-compiled. They MUST use `@model object` + `dynamic` (not `@model <PluginType>`) — see `AGENTS.md` for the why and for the full "adding a WebUI page" guide.
+
+## KFC Plugin — EXCEED GEAR + NABLA (+ GRAVITY WARS)
 
 ### Static Data
 
-Static game data (events, courses, valgene, apigene, arena, extend, information, music_limited, ...) is stored in EF tables (`sv_static_*`) and seeded from `Data/Seed/asphyxia_data.json` — an extract of the asphyxia plugin's `data/exg.ts`, `data/nbl.ts`, `data/ii.ts`, `data/booth.ts`. Seeding is idempotent.
+Static game data (events, courses, valgene, apigene, arena, extend, information, music_limited, …) is stored in EF tables (`sv_static_*`) and seeded from `Data/Seed/asphyxia_data.json` (an extract of the asphyxia plugin's `data/*.ts`) plus `Data/Seed/events_list.json` (the asphyxia `webui/asset/json/events.json` events6/7 catalog, used by the **Unlock Events** page to toggle stamp/tama/variant/achmissions events and to grant gift/cross_online event presents on load). Seeding is idempotent and triggered from the WebUI **Data** page.
+
+`music_db.xml` (shift_jis, ~8.4MB) is NOT committed. Upload it from the WebUI **Data** page (or place it in `StellaKFCPlugin/Data/Seed/music_db.xml` and use **Reload from disk**) to populate `sv_music`.
 
 ### v6 → v7 Migration
 
@@ -250,7 +210,7 @@ dotnet ef migrations add <Name> --project StellaKFCPlugin --startup-project Stel
 # Apply to database
 dotnet ef database update --project StellaKFCPlugin --startup-project Stella.MigrationHelper
 
-# Generate idempotent SQL script (for manual deployment)
+# Idempotent SQL script (for manual deployment)
 dotnet ef migrations script --idempotent --project StellaKFCPlugin --startup-project Stella.MigrationHelper
 ```
 
@@ -258,5 +218,4 @@ Or just run the server — `OnAppInitialize` calls `Database.Migrate()` automati
 
 ## Credits
 
-Originally coded by [KBinXml.Net By Milkitic](https://github.com/Milkitic/KBinXml.Net)
-Stella coded to add types when serialization
+Originally coded with [KBinXml.Net by Milkitic](https://github.com/Milkitic/KBinXml.Net). Stella adds typed serialization and the e-amusement server implementation.

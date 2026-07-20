@@ -1,0 +1,14 @@
+@model object
+@{ dynamic m = Model; }
+<div class="rounded-xl bg-zinc-900/60 border border-zinc-800 overflow-hidden">
+    <div class="px-5 py-4 border-b border-zinc-800"><p class="font-medium text-zinc-100">Weekly Score Attack <span class="text-zinc-500 text-sm">(@m.Rows.Count)</span></p></div>
+    <div class="overflow-x-auto max-h-[70vh]">
+    <table class="w-full text-sm">
+        <thead class="text-left text-zinc-500 border-b border-zinc-800 sticky top-0 bg-zinc-900"><tr><th class="px-5 py-2 font-medium">Ver</th><th class="px-5 py-2 font-medium">Week</th><th class="px-5 py-2 font-medium">Music</th><th class="px-5 py-2 font-medium">Type</th><th class="px-5 py-2 font-medium">Player</th><th class="px-5 py-2 font-medium">EX</th><th class="px-5 py-2 font-medium">Plays</th></tr></thead>
+        <tbody>
+        @foreach (var r in m.Rows){<tr class="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-800/30"><td class="px-5 py-3 text-zinc-400">sv@r.Version</td><td class="px-5 py-3 text-zinc-400">@r.Week</td><td class="px-5 py-3 text-zinc-100 font-mono text-xs">@r.Mid</td><td class="px-5 py-3 text-zinc-400">@r.Mtype</td><td class="px-5 py-3 text-zinc-300">@r.Name</td><td class="px-5 py-3 text-pink-300 font-medium">@r.Exscore</td><td class="px-5 py-3 text-zinc-400">@r.PlayCount</td></tr>}
+        @if (m.Rows.Count==0){<tr><td colspan="7" class="px-5 py-8 text-center text-zinc-500">No weekly score attack records yet.</td></tr>}
+        </tbody>
+    </table>
+    </div>
+</div>

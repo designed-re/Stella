@@ -1,0 +1,10 @@
+{
+  "name": "stella-webui-assets",
+  "private": true,
+  "scripts": {
+    "build": "tailwindcss -i ./src/app.css -o ../Stella/wwwroot/webui/css/app.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}

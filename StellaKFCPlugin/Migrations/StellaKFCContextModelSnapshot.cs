@@ -351,6 +351,108 @@ namespace StellaKFCPlugin.Migrations
                     b.ToTable("sv_static_event", (string)null);
                 });
 
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvEventItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ItemKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("item_key");
+
+                    b.Property<string>("ItemsJson")
+                        .IsRequired()
+                        .HasMaxLength(-1)
+                        .HasColumnType("longtext")
+                        .HasColumnName("items_json");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Version", "ItemKey" }, "idx_version_item_key")
+                        .IsUnique();
+
+                    b.ToTable("sv_static_event_items", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvEventList", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Enabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(false)
+                        .HasColumnName("enabled");
+
+                    b.Property<string>("EventId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("event_id");
+
+                    b.Property<int>("MinVersion")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("min_version");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("SettingsJson")
+                        .HasMaxLength(-1)
+                        .HasColumnType("longtext")
+                        .HasColumnName("settings_json");
+
+                    b.Property<int>("StartDate")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("start_date");
+
+                    b.Property<string>("StartsJson")
+                        .HasMaxLength(-1)
+                        .HasColumnType("longtext")
+                        .HasColumnName("starts_json");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)")
+                        .HasColumnName("type");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("version");
+
+                    b.Property<string>("VersionsJson")
+                        .HasMaxLength(-1)
+                        .HasColumnType("longtext")
+                        .HasColumnName("versions_json");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "Version", "EventId" }, "idx_version_event_id")
+                        .IsUnique();
+
+                    b.ToTable("sv_static_event_list", (string)null);
+                });
+
             modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvExtendData", b =>
                 {
                     b.Property<int>("Id")
@@ -615,9 +717,21 @@ namespace StellaKFCPlugin.Migrations
                         .HasColumnType("int(11)")
                         .HasColumnName("rwrd_id");
 
+                    b.Property<int>("RwrdMusicId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("rwrd_music_id");
+
                     b.Property<int>("RwrdParam")
                         .HasColumnType("int(11)")
                         .HasColumnName("rwrd_param");
+
+                    b.Property<int>("RwrdPoint")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("rwrd_point");
 
                     b.Property<int>("RwrdType")
                         .HasColumnType("int(11)")
@@ -626,6 +740,28 @@ namespace StellaKFCPlugin.Migrations
                     b.Property<long>("StartDate")
                         .HasColumnType("bigint(20)")
                         .HasColumnName("start_date");
+
+                    b.Property<int>("TargetId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("target_id");
+
+                    b.Property<string>("TitleE")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasDefaultValue("")
+                        .HasColumnName("title_e");
+
+                    b.Property<string>("TitleJ")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasDefaultValue("")
+                        .HasColumnName("title_j");
 
                     b.Property<int>("Version")
                         .HasColumnType("int(11)")
@@ -637,6 +773,39 @@ namespace StellaKFCPlugin.Migrations
                     b.HasIndex(new[] { "Version", "Pbid" }, "idx_version_pbid");
 
                     b.ToTable("sv_static_policy_break", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvStartupFlag", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("EventStringsJson")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("FlagId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FlagId")
+                        .IsUnique();
+
+                    b.ToTable("sv_startup_flag", (string)null);
                 });
 
             modelBuilder.Entity("StellaKFCPlugin.EF.StaticData.SvUnlockEventData", b =>
@@ -696,7 +865,8 @@ namespace StellaKFCPlugin.Migrations
                     b.HasKey("Id")
                         .HasName("PRIMARY");
 
-                    b.HasIndex(new[] { "Version", "EventId" }, "idx_version_event_id");
+                    b.HasIndex(new[] { "Version", "EventId" }, "idx_version_event_id")
+                        .HasDatabaseName("idx_version_event_id1");
 
                     b.ToTable("sv_static_unlock_event", (string)null);
                 });
@@ -837,6 +1007,57 @@ namespace StellaKFCPlugin.Migrations
                     b.HasIndex(new[] { "WeekId" }, "idx_week_id");
 
                     b.ToTable("sv_static_weekly_music", (string)null);
+                });
+
+            modelBuilder.Entity("StellaKFCPlugin.EF.Sv3Story", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClearCnt")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("clear_cnt");
+
+                    b.Property<int>("ProgressId")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("progress_id");
+
+                    b.Property<int>("ProgressParam")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("progress_param");
+
+                    b.Property<string>("RefId")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("char(16)")
+                        .HasColumnName("ref_id")
+                        .IsFixedLength();
+
+                    b.Property<int>("RouteFlg")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("route_flg");
+
+                    b.Property<int>("StoryId")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("story_id");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int(11)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex(new[] { "RefId", "Version", "StoryId" }, "idx_refid_version_storyid");
+
+                    b.ToTable("sv3_story", null, t =>
+                        {
+                            t.HasComment("GRAVITY WARS (sv3) story progression data");
+                        });
                 });
 
             modelBuilder.Entity("StellaKFCPlugin.EF.SvArena", b =>
@@ -1217,6 +1438,18 @@ namespace StellaKFCPlugin.Migrations
                         .HasColumnType("date")
                         .HasColumnName("date");
 
+                    b.Property<int>("DistributionDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("distribution_date");
+
+                    b.Property<int>("InfVer")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(11)")
+                        .HasDefaultValue(0)
+                        .HasColumnName("inf_ver");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -1378,6 +1611,12 @@ namespace StellaKFCPlugin.Migrations
                         .HasColumnType("bigint(20) unsigned")
                         .HasColumnName("blaster_pass_limit_date");
 
+                    b.Property<uint>("Blocks")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(10) unsigned")
+                        .HasDefaultValue(10000u)
+                        .HasColumnName("blocks");
+
                     b.Property<int>("BplSupport")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int(11)")
@@ -1483,6 +1722,9 @@ namespace StellaKFCPlugin.Migrations
                         .HasColumnName("name")
                         .HasDefaultValueSql("'VOLTEX'");
 
+                    b.Property<byte>("NarrowDown")
+                        .HasColumnType("tinyint unsigned");
+
                     b.Property<int>("Nemsys")
                         .HasColumnType("int(11)")
                         .HasColumnName("nemsys");
@@ -1490,6 +1732,12 @@ namespace StellaKFCPlugin.Migrations
                     b.Property<byte>("NotesOption")
                         .HasColumnType("tinyint(3) unsigned")
                         .HasColumnName("notes_option");
+
+                    b.Property<uint>("Packets")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(10) unsigned")
+                        .HasDefaultValue(10000u)
+                        .HasColumnName("packets");
 
                     b.Property<int>("Pcb")
                         .HasColumnType("int(11)")

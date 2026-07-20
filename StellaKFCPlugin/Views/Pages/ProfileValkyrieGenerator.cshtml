@@ -1,0 +1,10 @@
+@model object
+@{ dynamic m = Model; }
+<div class="rounded-xl bg-zinc-900/60 border border-zinc-800 p-6">
+    <p class="font-medium text-zinc-100 mb-2">Valkyrie Generator</p>
+    <p class="text-sm text-zinc-400 mb-4">asphyxia generates valkyrie-emblem PNGs from a profile's best scores. Stella shows the eligible song pool (sv_static valkyrie list); PNG generation is not implemented in the WebUI yet.</p>
+    <div class="flex flex-wrap gap-2">
+    @foreach (var v in m.ValkSongs){<span class="px-2.5 py-1 rounded-md bg-zinc-950 border border-zinc-800 text-zinc-300 font-mono text-xs">@v.MusicId</span>}
+    @if (m.ValkSongs.Count==0){<span class="text-zinc-500 text-sm">No valkyrie songs seeded.</span>}
+    </div>
+</div>

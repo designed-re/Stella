@@ -38,14 +38,14 @@ namespace CorePlugin.Models
         [XmlAttribute(AttributeName = "status")]
         public string Status { get; set; } = "0";
 
-        [XmlElement(ElementName = "balance")]
-        public int Balance { get; set; }
-
         [XmlElement(ElementName = "autocharge")]
         public byte Autocharge { get; set; }
 
         [XmlElement(ElementName = "acstatus")]
         public byte AcStatus { get; set; }
+
+        [XmlElement(ElementName = "balance")]
+        public int Balance { get; set; }
     }
 
     // Request models

@@ -36,6 +36,7 @@ namespace StellaKFCPlugin.EF
         public virtual DbSet<SvSkill> SvSkills { get; set; }
 
         public virtual DbSet<SvWeeklyMusicScore> SvWeeklyMusicScores { get; set; }
+        public virtual DbSet<Sv3Story> Sv3Stories { get; set; }
 
         public virtual DbSet<SvPolicyBreak> SvPolicyBreaks { get; set; }
 
@@ -57,7 +58,9 @@ namespace StellaKFCPlugin.EF
 
         public virtual DbSet<StaticData.SvInformationData> SvInformationDatas { get; set; }
 
-        public virtual DbSet<StaticData.SvUnlockEventData> SvUnlockEventDatas { get; set; }
+       public virtual DbSet<StaticData.SvUnlockEventData> SvUnlockEventDatas { get; set; }
+       public virtual DbSet<StaticData.SvEventList> SvEventLists { get; set; }
+        public virtual DbSet<StaticData.SvEventItem> SvEventItems { get; set; }
 
         public virtual DbSet<StaticData.SvArenaStationItem> SvArenaStationItems { get; set; }
 
@@ -80,6 +83,8 @@ namespace StellaKFCPlugin.EF
         public virtual DbSet<StaticData.SvWeeklyMusic> SvWeeklyMusics { get; set; }
 
         public virtual DbSet<StaticData.SvHaveNote> SvHaveNotes { get; set; }
+
+        public virtual DbSet<StaticData.SvStartupFlag> SvStartupFlags { get; set; }
         private static string? _cachedConnectionString;
         private static MariaDbServerVersion? _cachedServerVersion;
         private static readonly object _configLock = new();
@@ -96,8 +101,7 @@ namespace StellaKFCPlugin.EF
         /// Resolves the KFC DB connection string once (caching the MariaDB server
         /// version so <c>new StellaKFCContext()</c> does not re-read config / re-detect
         /// the server version on every request). The connection string can be
-        /// overridden through the <c>STELLA_KFC_DB</c> environment variable to avoid
-        /// committing credentials; otherwise <c>plugins/plugin_kfc.json</c> is used.
+        /// resolved from <c>plugins/plugin_kfc.json</c> only (no env vars).
         /// </summary>
         public static (string ConnectionString, MariaDbServerVersion ServerVersion) ResolveConfiguration()
         {
@@ -110,16 +114,14 @@ namespace StellaKFCPlugin.EF
                     return (_cachedConnectionString, _cachedServerVersion!);
 
                 var config = new ConfigurationBuilder()
-                    .AddJsonFile(Path.Combine(Directory.GetCurrentDirectory(), "plugins", "plugin_kfc.json"), optional: true)
+                    .AddJsonFile(ResolvePluginConfigPath("plugin_kfc.json"), optional: true)
                     .Build();
                 var coreConfig = config.Get<StellaKFCPluginConfig>() ?? new StellaKFCPluginConfig();
 
-                var connStr = Environment.GetEnvironmentVariable("STELLA_KFC_DB");
-                if (string.IsNullOrWhiteSpace(connStr))
-                    connStr = coreConfig.DbConnectionString;
+                var connStr = coreConfig.DbConnectionString;
                 if (string.IsNullOrWhiteSpace(connStr))
                     throw new InvalidOperationException(
-                        "StellaKFCPlugin DB connection string is not configured. Set the STELLA_KFC_DB environment variable or plugins/plugin_kfc.json.");
+                        "StellaKFCPlugin DB connection string is not configured. Set the \"db\" field in plugins/plugin_kfc.json.");
 
                 _cachedConnectionString = connStr;
                 _cachedServerVersion = new MariaDbServerVersion(ServerVersion.AutoDetect(connStr));
@@ -203,6 +205,14 @@ namespace StellaKFCPlugin.EF
                     .HasColumnType("int(11)")
                     .HasColumnName("version")
                     .HasDefaultValue(6);
+                entity.Property(e => e.InfVer)
+                    .HasColumnType("int(11)")
+                    .HasColumnName("inf_ver")
+                    .HasDefaultValue(0);
+                entity.Property(e => e.DistributionDate)
+                    .HasColumnType("int(11)")
+                    .HasColumnName("distribution_date")
+                    .HasDefaultValue(0);
             });
 
             builder.Entity<SvParam>(entity =>
@@ -344,6 +354,14 @@ namespace StellaKFCPlugin.EF
                     .HasComment("equals with block_no")
                     .HasColumnType("int(11)")
                     .HasColumnName("pcb");
+                entity.Property(e => e.Packets)
+                    .HasColumnType("int(10) unsigned")
+                    .HasColumnName("packets")
+                    .HasDefaultValue(10000);
+                entity.Property(e => e.Blocks)
+                    .HasColumnType("int(10) unsigned")
+                    .HasColumnName("blocks")
+                    .HasDefaultValue(10000);
                 entity.Property(e => e.PlayChain)
                     .HasColumnType("int(10) unsigned")
                     .HasColumnName("play_chain");
@@ -783,6 +801,24 @@ namespace StellaKFCPlugin.EF
                 entity.Property(e => e.HiscoreCount).HasColumnType("int(11)").HasColumnName("hiscore_count").HasDefaultValue(0);
             });
 
+
+            builder.Entity<Sv3Story>(entity =>
+            {
+                entity.HasKey(e => e.Id).HasName("PRIMARY");
+
+                entity.ToTable("sv3_story", tb => tb.HasComment("GRAVITY WARS (sv3) story progression data"));
+
+                entity.HasIndex(e => new { e.RefId, e.Version, e.StoryId }, "idx_refid_version_storyid");
+
+                entity.Property(e => e.Id).HasColumnType("int(11)").HasColumnName("id");
+                entity.Property(e => e.RefId).HasMaxLength(16).IsFixedLength().HasColumnName("ref_id");
+                entity.Property(e => e.Version).HasColumnType("int(11)").HasColumnName("version");
+                entity.Property(e => e.StoryId).HasColumnType("int(11)").HasColumnName("story_id");
+                entity.Property(e => e.ProgressId).HasColumnType("int(11)").HasColumnName("progress_id");
+                entity.Property(e => e.ProgressParam).HasColumnType("int(11)").HasColumnName("progress_param");
+                entity.Property(e => e.ClearCnt).HasColumnType("int(11)").HasColumnName("clear_cnt");
+                entity.Property(e => e.RouteFlg).HasColumnType("int(11)").HasColumnName("route_flg");
+            });
             builder.Entity<SvPolicyBreak>(entity =>
             {
                 entity.HasKey(e => e.Id).HasName("PRIMARY");
@@ -950,7 +986,36 @@ namespace StellaKFCPlugin.EF
                 entity.Property(e => e.DataJson).HasMaxLength(-1).HasColumnName("data_json");
                 entity.Property(e => e.ItemsJson).HasMaxLength(-1).HasColumnName("items_json");
                 entity.Property(e => e.TogglesJson).HasMaxLength(-1).HasColumnName("toggles_json");
+               entity.Property(e => e.SettingsJson).HasMaxLength(-1).HasColumnName("settings_json");
+           });
+
+            builder.Entity<StaticData.SvEventList>(entity =>
+            {
+                entity.HasKey(e => e.Id).HasName("PRIMARY");
+                entity.ToTable("sv_static_event_list");
+                entity.HasIndex(e => new { e.Version, e.EventId }, "idx_version_event_id").IsUnique();
+                entity.Property(e => e.Id).HasColumnType("int(11)").HasColumnName("id");
+                entity.Property(e => e.Version).HasColumnType("int(11)").HasColumnName("version");
+                entity.Property(e => e.EventId).HasMaxLength(64).HasColumnName("event_id");
+                entity.Property(e => e.Type).HasMaxLength(32).HasColumnName("type");
+                entity.Property(e => e.MinVersion).HasColumnType("int(11)").HasColumnName("min_version");
+                entity.Property(e => e.StartDate).HasColumnType("int(11)").HasColumnName("start_date");
+                entity.Property(e => e.VersionsJson).HasMaxLength(-1).HasColumnName("versions_json");
+                entity.Property(e => e.StartsJson).HasMaxLength(-1).HasColumnName("starts_json");
+                entity.Property(e => e.Enabled).HasColumnType("tinyint(1)").HasColumnName("enabled").HasDefaultValue(false);
+                entity.Property(e => e.Name).HasMaxLength(256).HasColumnName("name");
                 entity.Property(e => e.SettingsJson).HasMaxLength(-1).HasColumnName("settings_json");
+            });
+
+            builder.Entity<StaticData.SvEventItem>(entity =>
+            {
+                entity.HasKey(e => e.Id).HasName("PRIMARY");
+                entity.ToTable("sv_static_event_items");
+                entity.HasIndex(e => new { e.Version, e.ItemKey }, "idx_version_item_key").IsUnique();
+                entity.Property(e => e.Id).HasColumnType("int(11)").HasColumnName("id");
+                entity.Property(e => e.Version).HasColumnType("int(11)").HasColumnName("version");
+                entity.Property(e => e.ItemKey).HasMaxLength(64).HasColumnName("item_key");
+                entity.Property(e => e.ItemsJson).HasMaxLength(-1).HasColumnName("items_json");
             });
 
             builder.Entity<StaticData.SvArenaStationItem>(entity =>
@@ -1059,6 +1124,11 @@ namespace StellaKFCPlugin.EF
                 entity.Property(e => e.RwrdParam).HasColumnType("int(11)").HasColumnName("rwrd_param");
                 entity.Property(e => e.StartDate).HasColumnType("bigint(20)").HasColumnName("start_date");
                 entity.Property(e => e.EndDate).HasColumnType("bigint(20)").HasColumnName("end_date");
+                entity.Property(e => e.TitleJ).HasMaxLength(255).HasColumnName("title_j").HasDefaultValue("");
+                entity.Property(e => e.TitleE).HasMaxLength(255).HasColumnName("title_e").HasDefaultValue("");
+                entity.Property(e => e.TargetId).HasColumnType("int(11)").HasColumnName("target_id").HasDefaultValue(0);
+                entity.Property(e => e.RwrdPoint).HasColumnType("int(11)").HasColumnName("rwrd_point").HasDefaultValue(0);
+                entity.Property(e => e.RwrdMusicId).HasColumnType("int(11)").HasColumnName("rwrd_music_id").HasDefaultValue(0);
             });
 
             builder.Entity<StaticData.SvWeeklyMusic>(entity =>
@@ -1082,6 +1152,28 @@ namespace StellaKFCPlugin.EF
                 entity.Property(e => e.NoteId).HasColumnType("int(11)").HasColumnName("note_id");
                 entity.Property(e => e.Param).HasColumnType("int(11)").HasColumnName("param");
             });
+
+            builder.Entity<StaticData.SvStartupFlag>(entity =>
+            {
+                entity.ToTable("sv_startup_flag");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.FlagId).HasMaxLength(64).IsRequired();
+                entity.Property(e => e.DisplayName).HasMaxLength(128).IsRequired();
+                entity.Property(e => e.EventStringsJson).IsRequired();
+                entity.HasIndex(e => e.FlagId).IsUnique();
+            });
         }
+        /// <summary>
+        /// Resolves a plugin config file under plugins/, checking the current
+        /// working directory first (production/Docker app root) then the host
+        /// assembly base directory (bin output when running via `dotnet run`).
+        /// </summary>
+        public static string ResolvePluginConfigPath(string fileName)
+        {
+            var cwd = Path.Combine(Directory.GetCurrentDirectory(), "plugins", fileName);
+            if (File.Exists(cwd)) return cwd;
+            return Path.Combine(AppContext.BaseDirectory, "plugins", fileName);
+        }
+
     }
 }

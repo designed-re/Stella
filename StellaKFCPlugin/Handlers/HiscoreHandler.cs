@@ -23,6 +23,13 @@ namespace StellaKFCPlugin.Handlers
         [StellaHandler("game", "sv7_hiscore", typeof(HiscoreRequest))]
         public async Task<HiscoreResponse> HiscoreNabla() => await HiscoreInternal(7);
 
+        [StellaHandler("game", "hiscore", typeof(HiscoreRequest))]
+        public async Task<HiscoreResponse> HiscoreBare() => await HiscoreInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
+        [StellaHandler("game_3", "hiscore", typeof(HiscoreRequest))]
+        public async Task<HiscoreResponse> HiscoreBareGame3() => await HiscoreInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
+
         private async Task<HiscoreResponse> HiscoreInternal(int gameVersion)
         {
             using var db = new StellaKFCContext();
@@ -49,16 +56,22 @@ namespace StellaKFCPlugin.Handlers
                 {
                     Id = (uint)rScore.MusicId,
                     Type = (uint)rScore.Type,
-                    AsqSequence = KfcVersion.IdToCode(pScore.Id),
+                    // asphyxia features.ts: a_sq = IDToCode(profile.id). Stella
+                    // stores the display code directly in SvProfile.Code (already
+                    // in 0000-0000 form), and load returns sdvx_id = Code. Use
+                    // Code here so hiscore seq matches the player sdvx_id -- the
+                    // previous IdToCode(pScore.Id) formatted the EF auto-increment
+                    // primary key, which is unrelated to the in-game code.
+                    AsqSequence = pScore.Code,
                     ANameId = pScore.Name,
                     AScore = (uint)rScore.Score,
-                    LsqSequence = KfcVersion.IdToCode(pScore.Id),
+                    LsqSequence = pScore.Code,
                     LNameId = pScore.Name,
                     LScore = (uint)rScore.Score,
-                    AxSqSequence = KfcVersion.IdToCode(pExscore.Id),
+                    AxSqSequence = pExscore.Code,
                     AxNameId = pExscore.Name,
                     AxScore = (uint)rExscore.Exscore,
-                    LxSqSequence = KfcVersion.IdToCode(pExscore.Id),
+                    LxSqSequence = pExscore.Code,
                     LxNameId = pExscore.Name,
                     LxScore = (uint)rExscore.Exscore,
                 });

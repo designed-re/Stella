@@ -6,8 +6,11 @@ namespace CorePlugin.Models
     [XmlRoot(ElementName = "pcbtracker")]
     public class GetPcbTrackerResponse : IStellaEAmuseResponse
     {
+        [XmlAttribute(AttributeName = "status")]
+        public string Status { get; set; } = "0";
+
         [XmlAttribute(AttributeName = "ecenable")]
-        public bool ECEnable { get; set; } //this indicates paseli enabled or not
+        public int ECEnable { get; set; }
 
         [XmlAttribute(AttributeName = "eclimit")]
         public int ECLimit { get; set; }

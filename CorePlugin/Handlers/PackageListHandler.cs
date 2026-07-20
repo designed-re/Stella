@@ -12,7 +12,7 @@ namespace CorePlugin.Handlers
 
             return new GetPackageListResponse
             {
-                Expire = 600,
+                Expire = 1200,
                 // TODO: Add package list items here
             };
         }

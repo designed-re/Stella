@@ -1,0 +1,14 @@
+@model object
+@{ dynamic m = Model; }
+<div class="rounded-xl bg-zinc-900/60 border border-zinc-800 overflow-hidden">
+    <div class="px-5 py-4 border-b border-zinc-800"><p class="font-medium text-zinc-100">Scores <span class="text-zinc-500 text-sm">(@m.Scores.Count)</span></p></div>
+    <div class="overflow-x-auto max-h-[70vh]">
+    <table class="w-full text-sm">
+        <thead class="text-left text-zinc-500 border-b border-zinc-800 sticky top-0 bg-zinc-900"><tr><th class="px-5 py-2 font-medium">Music</th><th class="px-5 py-2 font-medium">Type</th><th class="px-5 py-2 font-medium">Score</th><th class="px-5 py-2 font-medium">EX</th><th class="px-5 py-2 font-medium">Clear</th><th class="px-5 py-2 font-medium">Grade</th><th class="px-5 py-2 font-medium">VF</th><th class="px-5 py-2 font-medium">Plays</th></tr></thead>
+        <tbody>
+        @foreach (var s in m.Scores){<tr class="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-800/30"><td class="px-5 py-3 text-zinc-100 font-mono text-xs">@s.Mid</td><td class="px-5 py-3 text-zinc-400">@s.Type</td><td class="px-5 py-3 text-pink-300 font-medium">@s.Score</td><td class="px-5 py-3 text-zinc-300">@s.Exscore</td><td class="px-5 py-3 text-zinc-400">@s.Clear</td><td class="px-5 py-3 text-zinc-400">@s.Grade</td><td class="px-5 py-3 text-zinc-400">@s.Volforce</td><td class="px-5 py-3 text-zinc-400">@s.PlayCount</td></tr>}
+        @if (m.Scores.Count==0){<tr><td colspan="8" class="px-5 py-8 text-center text-zinc-500">No scores recorded yet.</td></tr>}
+        </tbody>
+    </table>
+    </div>
+</div>

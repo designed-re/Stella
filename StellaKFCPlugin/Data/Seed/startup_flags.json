@@ -1,0 +1,11 @@
+[
+  { "flagId": "cuda", "displayName": "USE_CUDA_VIDEO_PRESENTER", "eventStrings": ["USE_CUDA_VIDEO_PRESENTER"] },
+  { "flagId": "submonvsync", "displayName": "Sub monitor V-Sync", "eventStrings": ["SUBMONITOR_VSYNC_ENABLE"] },
+  { "flagId": "konami50", "displayName": "Konami 50th Anniversary logo", "eventStrings": ["KONAMI_50TH_LOGO"] },
+  { "flagId": "christmas2023", "displayName": "Christmas login greeting", "eventStrings": ["MERRY_CHRISTMAS_2023"] },
+  { "flagId": "valentines2024", "displayName": "Valentines Day login greeting", "eventStrings": ["VALENTINES_DAY_2024"] },
+  { "flagId": "whiteday2024", "displayName": "White Day login greeting", "eventStrings": ["WHITE_DAY_2024"] },
+  { "flagId": "halloween", "displayName": "Halloween login greeting", "eventStrings": ["HALLOWEEN_EVENT"] },
+  { "flagId": "aprilrainbowline", "displayName": "V-RAN (April Fools 2024)", "eventStrings": ["APRIL_RAINBOW_LINE_ACTIVE"] },
+  { "flagId": "aprilyukkuri", "displayName": "Yukkuri (April Fools 2025)", "eventStrings": ["YUKKURI_RASIS_CREW_ENABLE", "YUKKURI_RASIS_TITLE_ENABLE"] }
+]

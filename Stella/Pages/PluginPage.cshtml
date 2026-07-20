@@ -1,0 +1,6 @@
+@page "/webui/p/{pluginId}/{slug?}"
+@model Stella.WebUI.Pages.PluginPageModel
+@{
+    ViewData["Title"] = Model.Title;
+}
+@Model.Body

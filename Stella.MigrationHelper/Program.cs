@@ -10,8 +10,7 @@ namespace Stella.MigrationHelper
 
             // Add services to the container.
             // The connection string is resolved via StellaKFCContext.ResolveConfiguration(),
-            // which prefers the STELLA_KFC_DB environment variable and falls back to
-            // plugins/plugin_kfc.json. Avoid hardcoding credentials here.
+            // which reads plugins/plugin_kfc.json (no env vars).
             var (kfcConnStr, kfcServerVersion) = StellaKFCPlugin.EF.StellaKFCContext.ResolveConfiguration();
             builder.Services.AddDbContext<StellaKFCPlugin.EF.StellaKFCContext>(x => x.UseMySql(kfcConnStr, kfcServerVersion));
             builder.Services.AddControllers();

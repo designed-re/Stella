@@ -25,6 +25,8 @@ public interface IDataProvider
     IReadOnlyList<SvExtendData> GetExtends();
     IReadOnlyList<SvInformationData> GetInformation();
     IReadOnlyList<SvUnlockEventData> GetUnlockEvents();
+    IReadOnlyList<SvEventList> GetEventList();
+    SvUnlockEventData? GetUnlockEvent(string eventId);
     SvCurrentArena? GetCurrentArena();
     IReadOnlyList<SvArenaStationItem> GetArenaStationItems();
     IReadOnlyList<SvMusicOverride> GetMusicOverrides();

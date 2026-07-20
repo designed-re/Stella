@@ -10,24 +10,49 @@ namespace Stella.Services
     public class PluginService(ILogger<PluginService> logger)
     {
         private readonly List<IStellaPlugin> _loadedPlugins = new();
+        private readonly List<Assembly> _loadedAssemblies = new();
+        private readonly Dictionary<Assembly, string> _assemblyPaths = new();
         private readonly Dictionary<string, (Type HandlerType, MethodInfo Method, IStellaPluginConfig PluginConfig, ILogger Logger)> _handlerCache = new();
         private static readonly ConcurrentDictionary<Type, XmlSerializer> _serializerCache = new();
 
         public IReadOnlyList<IStellaPlugin> LoadedPlugins => _loadedPlugins.AsReadOnly();
 
+        /// <summary>Assemblies loaded from the plugins/ directory (for Razor ApplicationParts &amp; static asset providers).</summary>
+        public IReadOnlyList<Assembly> LoadedAssemblies => _loadedAssemblies.AsReadOnly();
+
+        /// <summary>Maps each loaded plugin assembly to its on-disk DLL path (Razor runtime-compilation reference path).</summary>
+        public IReadOnlyDictionary<Assembly, string> AssemblyPaths => _assemblyPaths;
+
+        /// <summary>
+        /// Returns all registered handler keys as "service.method" strings.
+        /// Used by <c>services.get</c> to dynamically build the endpoint list
+        /// instead of hardcoding service entries.
+        /// </summary>
+        public IReadOnlyCollection<string> RegisteredHandlers => _handlerCache.Keys;
+
     public async Task LoadPluginsAsync()
     {
-        var path = Path.Combine(Directory.GetCurrentDirectory(), "plugins");
-
-        if (!Directory.Exists(path))
-            Directory.CreateDirectory(path);
-
-        var dlls = Directory.GetFiles(path, "*.dll", SearchOption.AllDirectories);
+        // Plugins live in a "plugins/" directory. Gather DLLs from both the
+        // current working directory (production/Docker app root) and the host
+        // assembly base directory (the bin output when running via
+        // `dotnet run --project Stella`, whose CWD is the project dir).
+        var searchPaths = new[]
+        {
+            Path.Combine(Directory.GetCurrentDirectory(), "plugins"),
+            Path.Combine(AppContext.BaseDirectory, "plugins"),
+        };
+        var dlls = searchPaths.Where(Directory.Exists)
+            .SelectMany(p => Directory.GetFiles(p, "*.dll", SearchOption.AllDirectories))
+            .Distinct()
+            .ToArray();
+        foreach (var p in searchPaths) if (!Directory.Exists(p)) Directory.CreateDirectory(p);
         foreach (var dll in dlls)
         {
             try
             {
                 var assembly = Assembly.Load(await File.ReadAllBytesAsync(dll));
+                _assemblyPaths[assembly] = dll;
+                _loadedAssemblies.Add(assembly);
                 logger.LogInformation($"Loaded plugin assembly: {assembly.FullName}");
 
                 // Load IStellaPlugin implementations only.
@@ -43,6 +68,7 @@ namespace Stella.Services
                         if (Activator.CreateInstance(pluginType) is IStellaPlugin instance)
                         {
                             _loadedPlugins.Add(instance);
+                            StellaPluginRegistry.Register(instance);
                             logger.LogInformation($"Loaded plugin: {instance.Name} v{instance.Version}");
                         }
                     }
@@ -136,6 +162,12 @@ namespace Stella.Services
                         // Pre-process XML to convert space-separated numeric arrays to individual elements
                         PreprocessXmlForArrays(requestData);
 
+                        // Normalize the root element name so XmlSerializer can match it.
+                        // Older games send <game_3>, <game_2> etc. but request models
+                        // have [XmlRoot(ElementName = "game")]. Rename the root to
+                        // match the expected element name.
+                        NormalizeRootElementName(requestData, requestType);
+
                         var serializer = GetSerializer(requestType);
                         using (var reader = requestData.Root.FirstNode.CreateReader())
                         {
@@ -204,6 +236,38 @@ namespace Stella.Services
         /// For example: &lt;judge __count="7"&gt;0 0 0 8 0 0 0&lt;/judge&gt;
         /// Becomes: &lt;judge&gt;0&lt;/judge&gt;&lt;judge&gt;0&lt;/judge&gt;...
         /// </summary>
+        /// <summary>
+        /// Renames the XML root element to match the request type's [XmlRoot]
+        /// ElementName. Older games send &lt;game_3&gt;, &lt;game_2&gt; etc. but
+        /// request models declare [XmlRoot(ElementName = "game")]. Without this,
+        /// XmlSerializer throws "was not expected" for non-matching root names.
+        /// </summary>
+        private void NormalizeRootElementName(XDocument doc, Type requestType)
+        {
+            if (doc?.Root == null) return;
+
+            var xmlRootAttr = requestType.GetCustomAttribute<XmlRootAttribute>();
+            if (xmlRootAttr?.ElementName == null) return;
+
+            var expectedName = xmlRootAttr.ElementName;
+
+            // The e-amusement XML wraps data in a <call> element:
+            //   <call srcid="..."><game_3 method="common" ...>...</game_3></call>
+            // XmlSerializer reads from Root.FirstNode, so normalize that child
+            // element rather than the <call> root itself.
+            if (doc.Root.FirstNode is XElement firstChild && firstChild.Name.LocalName != expectedName)
+            {
+                firstChild.Name = expectedName;
+            }
+
+            // Also normalize the root in case the document has no <call>
+            // wrapper and the root IS the data element.
+            if (doc.Root.Name.LocalName != expectedName)
+            {
+                doc.Root.Name = expectedName;
+            }
+        }
+
         private void PreprocessXmlForArrays(XDocument doc)
         {
             if (doc?.Root == null)
@@ -226,48 +290,55 @@ namespace Stella.Services
                     // Split the space-separated values
                     var values = child.Value.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
-                    if (values.Length > 0)
+                   if (values.Length > 0)
+                   {
+                       // Create new elements for each value
+                       var elementName = child.Name.LocalName;
+                       var parentElement = child.Parent;
+
+                       // Get the index of current element
+                       var siblings = parentElement.Elements(elementName).ToList();
+                       var currentIndex = siblings.IndexOf(child);
+
+                       // Remove the original element
+                       child.Remove();
+
+                       // Insert new elements with individual values
+                       XElement insertAfter = currentIndex > 0 ? siblings[currentIndex - 1] : null;
+
+                       foreach (var value in values)
+                       {
+                           var newElement = new XElement(child.Name, value);
+
+                           // Copy attributes except __count
+                           foreach (var attr in child.Attributes())
+                           {
+                               if (attr.Name.LocalName != "__count")
+                               {
+                                   newElement.Add(new XAttribute(attr.Name, attr.Value));
+                               }
+                           }
+
+                           if (insertAfter == null)
+                           {
+                               parentElement.AddFirst(newElement);
+                           }
+                           else
+                           {
+                               insertAfter.AddAfterSelf(newElement);
+                           }
+
+                           insertAfter = newElement;
+                       }
+                   }
+                    else
                     {
-                        // Create new elements for each value
-                        var elementName = child.Name.LocalName;
-                        var parentElement = child.Parent;
-
-                        // Get the index of current element
-                        var siblings = parentElement.Elements(elementName).ToList();
-                        var currentIndex = siblings.IndexOf(child);
-
-                        // Remove the original element
+                        // Empty array (__count="0" or whitespace-only text). Remove
+                        // the element so a target List<int>/List<uint> stays empty
+                        // instead of throwing FormatException parsing "" as a number.
                         child.Remove();
-
-                        // Insert new elements with individual values
-                        XElement insertAfter = currentIndex > 0 ? siblings[currentIndex - 1] : null;
-
-                        foreach (var value in values)
-                        {
-                            var newElement = new XElement(child.Name, value);
-
-                            // Copy attributes except __count
-                            foreach (var attr in child.Attributes())
-                            {
-                                if (attr.Name.LocalName != "__count")
-                                {
-                                    newElement.Add(new XAttribute(attr.Name, attr.Value));
-                                }
-                            }
-
-                            if (insertAfter == null)
-                            {
-                                parentElement.AddFirst(newElement);
-                            }
-                            else
-                            {
-                                insertAfter.AddAfterSelf(newElement);
-                            }
-
-                            insertAfter = newElement;
-                        }
                     }
-                }
+               }
                 else
                 {
                     // Recursively process child elements

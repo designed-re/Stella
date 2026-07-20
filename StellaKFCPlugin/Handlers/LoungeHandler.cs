@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
+using System.Xml.Schema;
 using System.Xml.Serialization;
 using Stella.Abstractions;
 using Stella.Abstractions.Plugins;
@@ -47,11 +49,23 @@ namespace StellaKFCPlugin.Handlers
         [StellaHandler("game", "sv7_lounge", typeof(LoungeRequest))]
         public async Task<LoungeResponse> LoungeNabla() => await LoungeInternal(7);
 
+        [StellaHandler("game", "lounge", typeof(LoungeRequest))]
+        public async Task<LoungeResponse> LoungeBare() => await LoungeInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+        [StellaHandler("game_3", "lounge", typeof(LoungeRequest))]
+        public async Task<LoungeResponse> LoungeBareGame3() => await LoungeInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
         [StellaHandler("game", "sv6_entry_s", typeof(EntrySRequest))]
         public async Task<EntrySResponse> EntryS() => await EntrySInternal(6);
 
         [StellaHandler("game", "sv7_entry_s", typeof(EntrySRequest))]
         public async Task<EntrySResponse> EntrySNabla() => await EntrySInternal(7);
+
+        [StellaHandler("game", "entry_s", typeof(EntrySRequest))]
+        public async Task<EntrySResponse> EntrySBare() => await EntrySInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
+        [StellaHandler("game_3", "entry_s", typeof(EntrySRequest))]
+        public async Task<EntrySResponse> EntrySBareGame3() => await EntrySInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
 
         private Task<LoungeResponse> LoungeInternal(int gameVersion)
         {
@@ -64,8 +78,11 @@ namespace StellaKFCPlugin.Handlers
                 if (matches.Count < 1)
                     return Task.FromResult(new LoungeResponse { Interval = 5 });
 
-                var longestWait = matches.Max(m => m.Sec);
-                return Task.FromResult(new LoungeResponse { Interval = 10, Wait = (uint)longestWait });
+                // asphyxia lounge computes `longestWait = Math.max(...matches.map(m => m.sec))`
+                // but globalMatch never stores `sec` on the room object, so m.sec is
+                // undefined and Math.max yields NaN — K.ITEM('u32', NaN) serialises as 0.
+                // Match that effective behaviour (wait = 0) for byte-level parity.
+                return Task.FromResult(new LoungeResponse { Interval = 10, Wait = 0 });
             }
         }
 
@@ -158,7 +175,7 @@ namespace StellaKFCPlugin.Handlers
             var resp = new EntrySResponse { EntryId = (uint)entryId };
             foreach (var p in others)
             {
-                resp.Entries.Add(new EntryPlayer { Port = (ushort)p.Port, Gip = p.Gip, Lip = p.Lip });
+                resp.Entries.Add(new EntryPlayer { Port = (ushort)p.Port, Gip = new U8Array(p.Gip), Lip = new U8Array(p.Lip) });
             }
             return resp;
         }
@@ -205,10 +222,34 @@ namespace StellaKFCPlugin.Handlers
         [XmlElement(ElementName = "port")]
         public ushort Port { get; set; }
 
+        // asphyxia uses K.ITEM('4u8', e.gip) — a single element with __type="4u8"
+        // and space-separated u8 values, NO __count (4u8 has a built-in count of 4).
+        // List<int> + ProcessListProperty would add __count="4" which makes the
+        // KBinXML writer compute 4*4=16 bytes instead of 4 — corrupting the response.
         [XmlElement(ElementName = "gip")]
-        public List<int> Gip { get; set; } = new();
+        public U8Array Gip { get; set; } = new();
 
         [XmlElement(ElementName = "lip")]
-        public List<int> Lip { get; set; } = new();
+        public U8Array Lip { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Serializes a list of 4 u8 values as a single KBinXML element with
+    /// __type="4u8" and space-separated values (asphyxia K.ITEM('4u8', [...])).
+    /// </summary>
+    public class U8Array : List<int>, IXmlSerializable
+    {
+        public U8Array() { }
+        public U8Array(IEnumerable<int> values) : base(values) { }
+
+        public XmlSchema? GetSchema() => null;
+
+        public void ReadXml(XmlReader reader) => reader.Skip();
+
+        public void WriteXml(XmlWriter writer)
+        {
+            writer.WriteAttributeString("__type", "4u8");
+            writer.WriteString(string.Join(" ", this));
+        }
     }
 }

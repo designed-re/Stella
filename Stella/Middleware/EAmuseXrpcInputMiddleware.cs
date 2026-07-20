@@ -26,6 +26,12 @@ namespace Stella.Middleware
 
             // Check if this is an EAMUSE request
             bool isEamuse = IsEAmuseRequest(context.Request);
+            if (!isEamuse)
+            {
+                // Log headers for debugging when EAMUSE detection fails on /eamuse path
+                _logger.LogWarning("Non-EAMUSE request on /eamuse path. Headers: {Headers}",
+                    string.Join(", ", context.Request.Headers.Select(h => $"{h.Key}={h.Value}")));
+            }
             if (isEamuse)
             {
                 _logger.LogInformation("Processing EAMUSE XRPC request");
@@ -67,24 +73,22 @@ namespace Stella.Middleware
 
         private bool IsEAmuseRequest(HttpRequest request)
         {
-            // var contentType = request.Headers.ContentType;
-            // Console.WriteLine(contentType);
-            // if (string.IsNullOrEmpty(contentType) || contentType != "application/octet-stream")
-            //     return false;
-
             if (!request.Headers.TryGetValue("User-Agent", out var ua))
                 return false;
-            
-            if (!ua.ToString().Equals("EAMUSE.XRPC/1.0", StringComparison.OrdinalIgnoreCase))
+
+            var uaStr = ua.ToString();
+            // Modern games send "EAMUSE.XRPC/1.0", older games (e.g. GRAVITY WARS)
+            // send "EAMUSE.Httpac/1.0". Accept both.
+            if (!uaStr.Equals("EAMUSE.XRPC/1.0", StringComparison.OrdinalIgnoreCase) &&
+                !uaStr.Equals("EAMUSE.Httpac/1.0", StringComparison.OrdinalIgnoreCase))
                 return false;
-            
+
             if (!request.Headers.TryGetValue("X-Compress", out var compressHeader))
                 return false;
-            
+
             var compAlgo = compressHeader.ToString();
-            return compAlgo.Equals("lz77", StringComparison.OrdinalIgnoreCase) || 
+            return compAlgo.Equals("lz77", StringComparison.OrdinalIgnoreCase) ||
                    compAlgo.Equals("none", StringComparison.OrdinalIgnoreCase);
-            // return true;
         }
 
         private async Task<(XDocument?, string?)> ReadAndProcessBodyAsync(HttpRequest request)

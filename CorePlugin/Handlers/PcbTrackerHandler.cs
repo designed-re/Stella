@@ -10,8 +10,8 @@ namespace CorePlugin.Handlers
         {
             return new GetPcbTrackerResponse()
             {
-                Expire = 600,
-                ECEnable = true,
+                Expire = 1200,
+                ECEnable = 1,
                 ECLimit = 0,
                 Limit = 0,
                 Time = DateTimeOffset.Now.ToUnixTimeMilliseconds() / 1000

@@ -10,7 +10,7 @@ namespace CorePlugin.Handlers
         {
             return new GetMessageResponse
             {
-                Expire = 600,
+                Expire = 300,
                 Items = (PluginConfig as CorePluginConfig).MaintenanceMode ? new List<MessageItem> //if true, return maintenance messages
                 {
                     new MessageItem

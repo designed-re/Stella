@@ -26,12 +26,24 @@ namespace StellaKFCPlugin.Handlers
         [StellaHandler("game", "sv7_save_mega", typeof(StubRequest))]
         public async Task<StubResponse> SaveMegaNabla() => new();
 
+        [StellaHandler("game", "save_mega", typeof(StubRequest))]
+        public async Task<StubResponse> SaveMegaBare() => new();
+
+        [StellaHandler("game_3", "save_mega", typeof(StubRequest))]
+        public async Task<StubResponse> SaveMegaBareGame3() => new();
+
+
         // exception — asphyxia stub (true)
         [StellaHandler("game", "sv6_exception", typeof(StubRequest))]
         public async Task<StubResponse> Exception() => new();
 
         [StellaHandler("game", "sv7_exception", typeof(StubRequest))]
         public async Task<StubResponse> ExceptionNabla() => new();
+
+        [StellaHandler("game", "exception", typeof(StubRequest))]
+        public async Task<StubResponse> ExceptionBare() => new();
+        [StellaHandler("game_3", "exception", typeof(StubRequest))]
+        public async Task<StubResponse> ExceptionBareGame3() => new();
 
         // log — asphyxia send.success()
         [StellaHandler("game", "sv6_log", typeof(StubRequest))]
@@ -40,12 +52,22 @@ namespace StellaKFCPlugin.Handlers
         [StellaHandler("game", "sv7_log", typeof(StubRequest))]
         public async Task<StubResponse> LogNabla() => new();
 
+        [StellaHandler("game", "log", typeof(StubRequest))]
+        public async Task<StubResponse> LogBare() => new();
+        [StellaHandler("game_3", "log", typeof(StubRequest))]
+        public async Task<StubResponse> LogBareGame3() => new();
+
         // entry_e — asphyxia logs eid, send.success()
         [StellaHandler("game", "sv6_entry_e", typeof(EntryERequest))]
         public async Task<StubResponse> EntryE() => new();
 
         [StellaHandler("game", "sv7_entry_e", typeof(EntryERequest))]
         public async Task<StubResponse> EntryENabla() => new();
+
+        [StellaHandler("game", "entry_e", typeof(EntryERequest))]
+        public async Task<StubResponse> EntryEBare() => new();
+        [StellaHandler("game_3", "entry_e", typeof(EntryERequest))]
+        public async Task<StubResponse> EntryEBareGame3() => new();
 
         // buy — asphyxia profiles.ts buy
         [StellaHandler("game", "sv6_buy", typeof(BuyRequest))]
@@ -54,12 +76,22 @@ namespace StellaKFCPlugin.Handlers
         [StellaHandler("game", "sv7_buy", typeof(BuyRequest))]
         public async Task<BuyResponse> BuyNabla() => await BuyInternal(7);
 
+        [StellaHandler("game", "buy", typeof(BuyRequest))]
+        public async Task<BuyResponse> BuyBare() => await BuyInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+        [StellaHandler("game_3", "buy", typeof(BuyRequest))]
+        public async Task<BuyResponse> BuyBareGame3() => await BuyInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+
         // print — asphyxia profiles.ts print
         [StellaHandler("game", "sv6_print", typeof(PrintRequest))]
         public async Task<PrintResponse> Print() => await PrintInternal(6);
 
         [StellaHandler("game", "sv7_print", typeof(PrintRequest))]
         public async Task<PrintResponse> PrintNabla() => await PrintInternal(7);
+
+        [StellaHandler("game", "print", typeof(PrintRequest))]
+        public async Task<PrintResponse> PrintBare() => await PrintInternal(Math.Abs(KfcVersion.GetVersion(Model)));
+        [StellaHandler("game_3", "print", typeof(PrintRequest))]
+        public async Task<PrintResponse> PrintBareGame3() => await PrintInternal(Math.Abs(KfcVersion.GetVersion(Model)));
 
         private async Task<BuyResponse> BuyInternal(int gameVersion)
         {
@@ -70,40 +102,50 @@ namespace StellaKFCPlugin.Handlers
             var profile = await db.SvProfiles.SingleOrDefaultAsync(x => x.RefId == request.RefId && x.Version == gameVersion);
             if (profile is null) return new BuyResponse { Status = "1" };
 
-            // asphyxia buy: currency_type true=blocks, false=packets
-            int cost = (int)(request.ItemElement.Items?.Sum(i => (long)i.Price) ?? 0);
+            // asphyxia buy (profiles.ts L1130-1162): the game sends <item> with
+            // FLAT __count arrays (item.item_type / item.item_id / item.param /
+            // item.price), NOT <item><info>...</info></item>. asphyxia zips the
+            // four arrays with _.zipWith. PreprocessXmlForArrays expands each
+            // __count array into repeated elements, so List<int>/List<uint>
+            // collects them in order. cost = sum of all prices.
+            var itemTypes = request.ItemElement.ItemTypes;
+            var itemIds = request.ItemElement.ItemIds;
+            var itemParams = request.ItemElement.Params;
+            var prices = request.ItemElement.Prices;
+            int count = new[] { itemTypes.Count, itemIds.Count, itemParams.Count, prices.Count }.Min();
+            int cost = prices.Sum();
             int earnedBlocks = request.EarnedGamecoinBlock;
             int earnedPackets = request.EarnedGamecoinPacket;
 
             if (request.CurrencyType)
             {
                 // blocks
-                int change = earnedBlocks - cost;
-                profile.Pcb += change;
+                long change = (long)earnedBlocks - cost;
+                if ((long)profile.Blocks + change >= 0)
+                    profile.Blocks = (uint)((long)profile.Blocks + change);
             }
             else
             {
-                // packets — Stella stores packets as a fixed 10000 in load, but
-                // we track via a separate field if needed. For now apply to Pcb
-                // as a generic currency since Stella doesn't have a separate
-                // packets column (gamecoin_packet is always 10000 in load).
-                // Actually asphyxia profile has separate packets/blocks. Stella
-                // SvProfile.Pcb = blocks. We need a packets field — but for now
-                // just apply to blocks to avoid data loss.
-                profile.Pcb += earnedBlocks - cost;
+                // packets
+                long change = (long)earnedPackets - cost;
+                if ((long)profile.Packets + change >= 0)
+                    profile.Packets = (uint)((long)profile.Packets + change);
             }
 
             // Save items
-            if (request.ItemElement.Items != null)
+            if (count > 0)
             {
-                foreach (var item in request.ItemElement.Items)
+                for (int i = 0; i < count; i++)
                 {
+                    var itemType = itemTypes[i];
+                    var itemId = itemIds[i];
+                    var itemParam = itemParams[i];
                     var rec = await db.SvItems.AsNoTracking().SingleOrDefaultAsync(x =>
-                        x.Profile == profile.Id && x.ItemId == item.ItemId && x.Type == item.ItemType && x.Version == gameVersion);
+                        x.Profile == profile.Id && x.ItemId == itemId && x.Type == (byte)itemType && x.Version == gameVersion);
                     if (rec is null)
-                        await db.SvItems.AddAsync(new SvItem { ItemId = item.ItemId, Param = item.Param, Type = (byte)item.ItemType, Profile = profile.Id, Version = gameVersion });
+                        await db.SvItems.AddAsync(new SvItem { ItemId = itemId, Param = itemParam, Type = (byte)itemType, Profile = profile.Id, Version = gameVersion });
                     else
-                        db.SvItems.Update(new SvItem { Id = rec.Id, ItemId = item.ItemId, Param = item.Param, Type = (byte)item.ItemType, Profile = profile.Id, Version = gameVersion });
+                        db.SvItems.Update(new SvItem { Id = rec.Id, ItemId = itemId, Param = itemParam, Type = (byte)itemType, Profile = profile.Id, Version = gameVersion });
                 }
             }
 
@@ -111,8 +153,8 @@ namespace StellaKFCPlugin.Handlers
 
             return new BuyResponse
             {
-                GamecoinPacket = 10000,
-                GamecoinBlock = (uint)profile.Pcb,
+                GamecoinPacket = profile.Packets,
+                GamecoinBlock = profile.Blocks,
             };
         }
 
@@ -185,23 +227,17 @@ namespace StellaKFCPlugin.Handlers
 
     public class BuyItemElement
     {
-        [XmlElement(ElementName = "info")]
-        public List<BuyItem> Items { get; set; } = new();
-    }
-
-    public class BuyItem
-    {
         [XmlElement(ElementName = "item_type")]
-        public int ItemType { get; set; }
+        public List<int> ItemTypes { get; set; } = new();
 
         [XmlElement(ElementName = "item_id")]
-        public uint ItemId { get; set; }
+        public List<uint> ItemIds { get; set; } = new();
 
         [XmlElement(ElementName = "param")]
-        public uint Param { get; set; }
+        public List<uint> Params { get; set; } = new();
 
         [XmlElement(ElementName = "price")]
-        public int Price { get; set; }
+        public List<int> Prices { get; set; } = new();
     }
 
     [XmlRoot(ElementName = "game")]
@@ -246,12 +282,14 @@ namespace StellaKFCPlugin.Handlers
         [XmlElement(ElementName = "result")]
         public sbyte Result { get; set; }
 
-        [XmlArray(ElementName = "genesis_cards")]
-        [XmlArrayItem(ElementName = "info")]
+        // asphyxia print: `genesis_cards: [...]` and `after_power: [...]` are
+        // direct arrays -> KBinJSON serialises them as repeated same-named
+        // elements (<genesis_cards>...</genesis_cards> x N), NOT wrapped in an
+        // <info> child. XmlElement (not XmlArray) reproduces that wire shape.
+        [XmlElement(ElementName = "genesis_cards")]
         public List<PrintGenesisCard> GenesisCards { get; set; } = new();
 
-        [XmlArray(ElementName = "after_power")]
-        [XmlArrayItem(ElementName = "info")]
+        [XmlElement(ElementName = "after_power")]
         public List<PrintAfterPower> AfterPower { get; set; } = new();
     }
 

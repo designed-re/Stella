@@ -27,9 +27,8 @@ namespace CorePlugin.EF
         /// <summary>
         /// Resolves the Core DB connection string once (caching the MariaDB server
         /// version so <c>new CoreContext()</c> does not re-read config / re-detect the
-        /// server version on every request). The connection string can be overridden
-        /// through the <c>STELLA_CORE_DB</c> environment variable to avoid committing
-        /// credentials; otherwise <c>plugins/plugin_core.json</c> is used.
+        /// server version on every request). The connection string comes solely from
+        /// <c>plugins/plugin_core.json</c> (no env vars).
         /// </summary>
         public static (string ConnectionString, MariaDbServerVersion ServerVersion) ResolveConfiguration()
         {
@@ -42,16 +41,14 @@ namespace CorePlugin.EF
                     return (_cachedConnectionString, _cachedServerVersion!);
 
                 var config = new ConfigurationBuilder()
-                    .AddJsonFile(Path.Combine(Directory.GetCurrentDirectory(), "plugins", "plugin_core.json"), optional: true)
+                    .AddJsonFile(ResolvePluginConfigPath("plugin_core.json"), optional: true)
                     .Build();
                 var coreConfig = config.Get<CorePluginConfig>() ?? new CorePluginConfig();
 
-                var connStr = Environment.GetEnvironmentVariable("STELLA_CORE_DB");
-                if (string.IsNullOrWhiteSpace(connStr))
-                    connStr = coreConfig.DbConnectionString;
+                var connStr = coreConfig.DbConnectionString;
                 if (string.IsNullOrWhiteSpace(connStr))
                     throw new InvalidOperationException(
-                        "CorePlugin DB connection string is not configured. Set the STELLA_CORE_DB environment variable or plugins/plugin_core.json.");
+                        "CorePlugin DB connection string is not configured. Set the \"db\" field in plugins/plugin_core.json.");
 
                 _cachedConnectionString = connStr;
                 _cachedServerVersion = new MariaDbServerVersion(ServerVersion.AutoDetect(connStr));
@@ -145,5 +142,17 @@ namespace CorePlugin.EF
 
             });
         }
+        /// <summary>
+        /// Resolves a plugin config file under plugins/, checking the current
+        /// working directory first (production/Docker app root) then the host
+        /// assembly base directory (bin output when running via `dotnet run`).
+        /// </summary>
+        public static string ResolvePluginConfigPath(string fileName)
+        {
+            var cwd = Path.Combine(Directory.GetCurrentDirectory(), "plugins", fileName);
+            if (File.Exists(cwd)) return cwd;
+            return Path.Combine(AppContext.BaseDirectory, "plugins", fileName);
+        }
+
     }
 }

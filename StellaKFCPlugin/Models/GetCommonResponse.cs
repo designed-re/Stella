@@ -1,6 +1,11 @@
 using System.Collections.Generic;
+using System.Xml;
+using System.Xml.Schema;
 using System.Xml.Serialization;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Stella.Abstractions;
+using StellaKFCPlugin.EF.StaticData;
 
 namespace StellaKFCPlugin.Models
 {
@@ -13,29 +18,29 @@ namespace StellaKFCPlugin.Models
         [XmlElement(ElementName = "valgene")]
         public ValgeneElement Valgene { get; set; } = new();
 
-        [XmlElement(ElementName = "skill_course")]
-        public SkillCourseElement SkillCourse { get; set; } = new();
+        [XmlElement(ElementName = "arena")]
+        public ArenaElement Arena { get; set; } = new();
 
         [XmlElement(ElementName = "event")]
         public EventElement Event { get; set; } = new();
 
-        [XmlElement(ElementName = "arena")]
-        public ArenaElement Arena { get; set; } = new();
-
         [XmlElement(ElementName = "extend")]
         public ExtendElement Extend { get; set; } = new();
-
-        [XmlElement(ElementName = "music_limited")]
-        public MusicLimitedElement MusicLimited { get; set; } = new();
-
-        [XmlElement(ElementName = "apigene")]
-        public ApigeneElement? Apigene { get; set; }
 
         [XmlElement(ElementName = "music")]
         public MusicOverrideElement Music { get; set; } = new();
 
+        [XmlElement(ElementName = "music_limited")]
+        public MusicLimitedElement MusicLimited { get; set; } = new();
+
+        [XmlElement(ElementName = "skill_course")]
+        public SkillCourseElement SkillCourse { get; set; } = new();
+
         [XmlElement(ElementName = "weekly_music")]
         public List<WeeklyMusicInfo> WeeklyMusic { get; set; } = new();
+
+        [XmlElement(ElementName = "apigene")]
+        public ApigeneElement? Apigene { get; set; }
     }
 
     [XmlRoot(ElementName = "apigene")]
@@ -92,19 +97,94 @@ namespace StellaKFCPlugin.Models
         public int ItemId { get; set; }
     }
 
+    /// <summary>
+    /// <c>music</c> block of the common response. asphyxia
+    /// (<c>common.ts</c> L319-343) builds <c>music: { info: musicOverride }</c>
+    /// where <c>musicOverride</c> is a flat array alternating two kinds of
+    /// <c>&lt;info&gt;</c> elements per overridden song:
+    /// <list type="number">
+    /// <item>An <b>info</b> element holding the song's top-level fields (every
+    ///   key except <c>charts</c>/<c>start</c>), each wrapped with
+    ///   <c>createItem</c> (<c>str</c> for strings, <c>u16</c> for
+    ///   <c>volume</c>, otherwise <c>u32</c>).</item>
+    /// <item>A <b>chart</b> element whose children are the difficulty names
+    ///   (<c>NOVICE/ADVANCED/EXHAUST/INFINITE/MAXIMUM/ULTIMATE</c>), each
+    ///   holding that chart's fields (e.g. <c>price</c>) wrapped with
+    ///   <c>createItem</c>.</item>
+    /// </list>
+    /// This heterogeneous array cannot be expressed with typed C# models, so
+    /// the element implements <see cref="IXmlSerializable"/> and writes the
+    /// <c>__type</c> attributes itself (the framework's reflection-based type
+    /// pass skips it because it exposes no public properties).
+    /// </summary>
     [XmlRoot(ElementName = "music")]
-    public class MusicOverrideElement
+    public class MusicOverrideElement : IXmlSerializable
     {
-        // info entries are music override info/chart blocks; serialized loosely.
-        [XmlElement(ElementName = "info")]
-        public List<MusicOverrideInfo> Infos { get; set; } = new();
-    }
+        // Held as a field (not a property) so the framework's reflection-based
+        // __type pass does not recurse into the <info> children.
+        public List<SvMusicOverride> Overrides = new();
 
-    public class MusicOverrideInfo
-    {
-        // Loose catch-all: rendered as attributes/children by custom serializer.
-        [XmlAnyElement]
-        public System.Xml.XmlElement[]? Elements { get; set; }
+        private static readonly Dictionary<string, string> DifficultyNames = new()
+        {
+            { "nov", "NOVICE" }, { "adv", "ADVANCED" }, { "exh", "EXHAUST" },
+            { "inf", "INFINITE" }, { "mxm", "MAXIMUM" }, { "ult", "ULTIMATE" },
+        };
+
+        public XmlSchema? GetSchema() => null;
+
+        public void ReadXml(XmlReader reader) => reader.Skip();
+
+        public void WriteXml(XmlWriter writer)
+        {
+            foreach (var song in Overrides)
+            {
+                JObject info;
+                try { info = JObject.Parse(string.IsNullOrEmpty(song.InfoJson) ? "{}" : song.InfoJson); }
+                catch { info = new JObject(); }
+                JObject charts;
+                try { charts = JObject.Parse(string.IsNullOrEmpty(song.ChartsJson) ? "{}" : song.ChartsJson); }
+                catch { charts = new JObject(); }
+
+                // info element: song top-level fields.
+                writer.WriteStartElement("info");
+                foreach (var prop in info.Properties())
+                    WriteKItem(writer, prop.Name, prop.Value);
+                writer.WriteEndElement();
+
+                // chart element: difficulty-name children holding chart fields.
+                writer.WriteStartElement("info");
+                foreach (var prop in charts.Properties())
+                {
+                    var name = DifficultyNames.TryGetValue(prop.Name, out var dn) ? dn : prop.Name.ToUpperInvariant();
+                    writer.WriteStartElement(name);
+                    if (prop.Value is JObject chartObj)
+                    {
+                        foreach (var cp in chartObj.Properties())
+                            WriteKItem(writer, cp.Name, cp.Value);
+                    }
+                    writer.WriteEndElement();
+                }
+                writer.WriteEndElement();
+            }
+        }
+
+        /// <summary>asphyxia <c>createItem</c>: str for strings, u16 for volume, u32 otherwise.</summary>
+        private static void WriteKItem(XmlWriter writer, string key, JToken value)
+        {
+            writer.WriteStartElement(key);
+            if (value.Type == JTokenType.String)
+            {
+                writer.WriteAttributeString("__type", "str");
+                writer.WriteString(value.ToString());
+            }
+            else
+            {
+                writer.WriteAttributeString("__type", key == "volume" ? "u16" : "u32");
+                // u32 must render unsigned; use the raw integer text.
+                writer.WriteString(value.ToString());
+            }
+            writer.WriteEndElement();
+        }
     }
 
     [XmlRoot(ElementName = "weekly_music")]
@@ -152,14 +232,14 @@ namespace StellaKFCPlugin.Models
         [XmlElement(ElementName = "valgene_id")]
         public int ValgeneId { get; set; }
 
+        [XmlElement(ElementName = "rarity")]
+        public int Rarity { get; set; }
+
         [XmlElement(ElementName = "item_type")]
         public int ItemType { get; set; }
 
         [XmlElement(ElementName = "item_id")]
         public int ItemId { get; set; }
-
-        [XmlElement(ElementName = "rarity")]
-        public int Rarity { get; set; }
     }
 
     [XmlRoot(ElementName = "skill_course")]
@@ -242,32 +322,38 @@ namespace StellaKFCPlugin.Models
     [XmlRoot(ElementName = "arena")]
     public class ArenaElement
     {
+        // All fields nullable so that when the arena is closed (season 0 /
+        // !arenaOpen / old datecode) BuildArena returns an empty ArenaElement
+        // that serialises as `<arena></arena>` — matching asphyxia
+        // `arenaData = {}` (send.object with no keys). XmlSerializer omits
+        // null [XmlElement] value-type fields, so the closed-arena response
+        // carries no children, byte-for-byte like asphyxia.
         [XmlElement(ElementName = "season")]
-        public int Season { get; set; }
+        public int? Season { get; set; }
 
         [XmlElement(ElementName = "rule")]
-        public int Rule { get; set; }
+        public int? Rule { get; set; }
 
         [XmlElement(ElementName = "rank_match_target")]
-        public int RankMatchTarget { get; set; }
+        public int? RankMatchTarget { get; set; }
 
         [XmlElement(ElementName = "time_start")]
-        public ulong TimeStart { get; set; }
+        public ulong? TimeStart { get; set; }
 
         [XmlElement(ElementName = "time_end")]
-        public ulong TimeEnd { get; set; }
+        public ulong? TimeEnd { get; set; }
 
         [XmlElement(ElementName = "shop_start")]
-        public ulong ShopStart { get; set; }
+        public ulong? ShopStart { get; set; }
 
         [XmlElement(ElementName = "shop_end")]
-        public ulong ShopEnd { get; set; }
+        public ulong? ShopEnd { get; set; }
 
         [XmlElement(ElementName = "is_open")]
-        public bool IsOpen { get; set; }
+        public bool? IsOpen { get; set; }
 
         [XmlElement(ElementName = "is_shop")]
-        public bool IsShop { get; set; }
+        public bool? IsShop { get; set; }
 
         [XmlElement(ElementName = "catalog")]
         public List<ArenaCatalog> Catalogs { get; set; } = new();
@@ -362,4 +448,3 @@ namespace StellaKFCPlugin.Models
         public byte Limited { get; set; }
     }
 }
-

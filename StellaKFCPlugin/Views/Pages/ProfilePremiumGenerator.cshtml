@@ -1,0 +1,13 @@
+@model object
+@{ dynamic m = Model; }
+<div class="rounded-xl bg-zinc-900/60 border border-zinc-800 p-6">
+    <p class="font-medium text-zinc-100 mb-2">Premium Generator (apigene)</p>
+    <p class="text-sm text-zinc-400 mb-4">NABLA apigene catalog used by the premium generator. asphyxia rolls rewards server-side; Stella lists the available gene entries. Roll logic is not implemented in the WebUI yet.</p>
+    <table class="w-full text-sm">
+        <thead class="text-left text-zinc-500 border-b border-zinc-800"><tr><th class="px-5 py-2 font-medium">ID</th><th class="px-5 py-2 font-medium">Name</th></tr></thead>
+        <tbody>
+        @foreach (var p in m.PreGenes){<tr class="border-b border-zinc-800/60 last:border-0"><td class="px-5 py-3 text-pink-300 font-mono text-xs">@p.ApigeneId</td><td class="px-5 py-3 text-zinc-300">@p.Name</td></tr>}
+        @if (m.PreGenes.Count==0){<tr><td colspan="2" class="px-5 py-8 text-center text-zinc-500">No apigene entries seeded.</td></tr>}
+        </tbody>
+    </table>
+</div>

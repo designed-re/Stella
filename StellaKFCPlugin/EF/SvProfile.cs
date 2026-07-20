@@ -50,6 +50,8 @@ public partial class SvProfile
 
     public byte EffCRight { get; set; }
 
+    public byte NarrowDown { get; set; }
+
     public string KacId { get; set; } = null!;
 
     public short SkillLevel { get; set; }
@@ -66,6 +68,12 @@ public partial class SvProfile
     /// equals with block_no
     /// </summary>
     public int Pcb { get; set; }
+
+    /// <summary>Gamecoin packets (asphyxia profile.packets). New profiles start at 10000.</summary>
+    public uint Packets { get; set; }
+
+    /// <summary>Gamecoin blocks (asphyxia profile.blocks). New profiles start at 10000.</summary>
+    public uint Blocks { get; set; }
 
     public uint PlayCount { get; set; }
 

@@ -24,8 +24,14 @@ namespace CorePlugin.Models
         [XmlAttribute(AttributeName = "status")]
         public string Status { get; set; }
 
-        [XmlAttribute(AttributeName = "expire")]
-        public int Expire { get; set; }
+        // asphyxia facility.get (core src/eamuse/Core/Facility.ts) does NOT emit
+        // an `expire` attribute (only `status` is merged by send.object). The
+        // `expire` attribute is therefore omitted entirely. A previous fix made
+        // this `int?` to skip emitting it, but XmlSerializer CANNOT serialize a
+        // nullable value type as an XmlAttribute -- it throws "XmlAttribute/XmlText
+        // cannot be used to encode complex types" while reflecting the type, so
+        // every facility.get response failed with an empty body. Removing the
+        // property matches asphyxia and fixes the serialization crash.
     }
 
     [XmlRoot(ElementName = "location")]
@@ -155,5 +161,4 @@ namespace CorePlugin.Models
         public string EaGate { get; set; }
     }
 }
-
 

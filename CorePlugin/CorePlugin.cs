@@ -1,4 +1,6 @@
 using CorePlugin.EF;
+using Microsoft.EntityFrameworkCore;
+using Stella.Abstractions.Cards;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -7,7 +9,7 @@ using Stella.Abstractions.Plugins;
 
 namespace CorePlugin
 {
-    public class CorePlugin : IStellaPlugin
+    public class CorePlugin : IStellaPlugin, IStellaCardProvider
     {
         public string Name => "CorePlugin";
         public string Version => "1.0.0";
@@ -20,18 +22,13 @@ namespace CorePlugin
         public Task OnBuilderInitialize(WebApplicationBuilder builder)
         {
             var config = new ConfigurationBuilder()
-                .AddJsonFile(Path.Combine(Directory.GetCurrentDirectory(), "plugins", "plugin_core.json"), optional: true)
+                .AddJsonFile(CoreContext.ResolvePluginConfigPath("plugin_core.json"), optional: true)
                 .Build();
             var coreConfig = config.Get<CorePluginConfig>() ?? new CorePluginConfig();
 
-            // Allow overriding the DB connection string via the STELLA_CORE_DB
-            // environment variable so credentials do not have to be committed in
-            // plugin_core.json.
-            var envConn = Environment.GetEnvironmentVariable("STELLA_CORE_DB");
-            if (!string.IsNullOrWhiteSpace(envConn))
-                coreConfig.DbConnectionString = envConn;
-
+            // DB connection string comes solely from plugin_core.json (no env vars).
             PluginConfig = coreConfig;
+            StellaCardProviderRegistry.Register(this);
 
             var (connStr, serverVersion) = CoreContext.ResolveConfiguration();
             builder.Services.AddDbContext<CoreContext>(x => x.UseMySql(connStr, serverVersion));
@@ -45,9 +42,22 @@ namespace CorePlugin
             {
                 context.Database.Migrate();
 
-                context.Database.EnsureCreated();
+                // context.Database.EnsureCreated();
             }
             return Task.CompletedTask;
+        }
+
+        public async Task<WebUICard?> GetCardAsync(string refid)
+        {
+            using var context = new CoreContext();
+            var card = await context.Cards.FirstOrDefaultAsync(c => c.RefId == refid);
+            return card is null ? null : new WebUICard
+            {
+                RefId = card.RefId,
+                CardId = card.CardId,
+                Paseli = card.Paseli,
+                PassCode = card.PassCode,
+            };
         }
     }
 }

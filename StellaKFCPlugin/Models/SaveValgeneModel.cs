@@ -70,11 +70,14 @@ namespace StellaKFCPlugin.Models
         [XmlElement(ElementName = "result")] 
         public int Result { get; set; } = 1;
 
+        // asphyxia saveValgene only emits ticket_num/limit_date when a
+        // valgene_ticket record exists; nullable so XmlSerializer omits them
+        // when no ticket is present.
         [XmlElement(ElementName = "ticket_num")]
-        public int TicketNum { get; set; }
+        public int? TicketNum { get; set; }
 
         [XmlElement(ElementName = "limit_date")]
-        public ulong LimitDate { get; set; }
+        public ulong? LimitDate { get; set; }
     }
 }
 

@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 using Stella.Abstractions;
 using Stella.Middleware;
 using Stella.Services;
+using Stella.Abstractions.Configuration;
+using Stella.WebUI;
 using Stella.Util;
 
 namespace Stella
@@ -22,7 +24,9 @@ namespace Stella
 
             builder.Services.AddControllers();
 
-            builder.WebHost.UseUrls(Environment.GetEnvironmentVariable("ASPNETCORE_URLS") ?? "http://+:80");
+            // Bind Stella/WebUI options from appsettings.json (no env vars).
+            StellaOptions.Bind(builder.Configuration);
+            builder.WebHost.UseUrls(builder.Configuration["Urls"] ?? "http://+:80");
 
             var pluginService =
                 new PluginService(LoggerFactory.Create(x => x.AddConsole()).CreateLogger<PluginService>());
@@ -40,12 +44,33 @@ namespace Stella
                 }
             }
 
+            // Register WebUI services (Razor Pages, cookie auth, antiforgery, plugin
+            // ApplicationParts) and per-plugin AJAX event handlers.
+            if (StellaOptions.WebUIEnabled)
+            {
+                builder.Services.AddStellaWebUI(pluginService);
+                foreach (var plugin in pluginService.LoadedPlugins)
+                {
+                    if (!plugin.PluginConfig.Enabled) continue;
+                    var router = WebUIEventRegistryStore.GetOrCreate(plugin.Name);
+                    plugin.RegisterWebUIEvents(router);
+                }
+            }
+
             var app = builder.Build();
             foreach (var plugin in pluginService.LoadedPlugins)
             {
                 await plugin.OnAppInitialize(app);
             }
-            
+
+            if (StellaOptions.WebUIEnabled)
+            {
+                app.UseAuthentication();
+                app.UseAuthorization();
+                app.UseStaticFiles();
+                app.MapStellaWebUI(pluginService);
+            }
+
             app.UseMiddleware<EAmuseXrpcInputMiddleware>();
 
             var eamuseGroup = app.MapGroup("eamuse");
@@ -61,16 +86,27 @@ namespace Stella
                     // Get processed EAMUSE data from middleware
                     var eAmuseData = httpContext.Items["ea"] as EAmuseXrpcData;
 
-                    // Validate the routing query parameter "f" (<service>.<method>)
-                    if (string.IsNullOrWhiteSpace(f) || f.IndexOf('.') < 0)
+                    // Resolve routing: prefer "f" param (modern: service.method),
+                    // fall back to "module"+"method" params (legacy: e.g.
+                    // module=services&method=get).
+                    string service;
+                    string method1;
+                    if (!string.IsNullOrWhiteSpace(f) && f.IndexOf('.') >= 0)
                     {
-                        logger.LogWarning("Invalid or missing 'f' query parameter: {f}", f ?? "<null>");
+                        var fParts = f.Split('.', 2);
+                        service = fParts[0];
+                        method1 = fParts[1];
+                    }
+                    else if (!string.IsNullOrWhiteSpace(module) && !string.IsNullOrWhiteSpace(method))
+                    {
+                        service = module;
+                        method1 = method;
+                    }
+                    else
+                    {
+                        logger.LogWarning("Invalid or missing routing params: f={f}, module={module}, method={method}", f ?? "<null>", module ?? "<null>", method ?? "<null>");
                         return;
                     }
-
-                    var fParts = f.Split('.', 2);
-                    var service = fParts[0];
-                    var method1 = fParts[1];
 
                     //TODO ADD PCBID Checking here
                     logger.LogInformation(model);
@@ -177,16 +213,27 @@ namespace Stella
                     // Get processed EAMUSE data from middleware
                     var eAmuseData = httpContext.Items["ea"] as EAmuseXrpcData;
 
-                    // Validate the routing query parameter "f" (<service>.<method>)
-                    if (string.IsNullOrWhiteSpace(f) || f.IndexOf('.') < 0)
+                    // Resolve routing: prefer "f" param (modern: service.method),
+                    // fall back to "module"+"method" params (legacy: e.g.
+                    // module=services&method=get).
+                    string service;
+                    string method1;
+                    if (!string.IsNullOrWhiteSpace(f) && f.IndexOf('.') >= 0)
                     {
-                        logger.LogWarning("Invalid or missing 'f' query parameter: {f}", f ?? "<null>");
+                        var fParts = f.Split('.', 2);
+                        service = fParts[0];
+                        method1 = fParts[1];
+                    }
+                    else if (!string.IsNullOrWhiteSpace(module) && !string.IsNullOrWhiteSpace(method))
+                    {
+                        service = module;
+                        method1 = method;
+                    }
+                    else
+                    {
+                        logger.LogWarning("Invalid or missing routing params: f={f}, module={module}, method={method}", f ?? "<null>", module ?? "<null>", method ?? "<null>");
                         return;
                     }
-
-                    var fParts = f.Split('.', 2);
-                    var service = fParts[0];
-                    var method1 = fParts[1];
 
                     //TODO ADD PCBID Checking here
                     logger.LogInformation(model);
@@ -334,6 +381,18 @@ namespace Stella
                 writer.WriteEndElement();
 
                 XDocument document = XDocument.Parse(sb.ToString());
+
+                // XmlSerializer renders null nullable VALUE types (int?, ulong?, etc.)
+                // as <foo xsi:nil="true" /> with xmlns:xsi/xsd namespace declarations.
+                // KBinXML has no namespace support and the ':' in the attribute name
+                // ("xsi:nil") corrupts the binary output. Strip these: remove elements
+                // marked xsi:nil (they represent null values that should be omitted) and
+                // drop all namespace-declaration attributes.
+                var xsiNs = (XNamespace)"http://www.w3.org/2001/XMLSchema-instance";
+                foreach (var nilEl in document.Descendants().Where(e => e.Attribute(xsiNs + "nil") != null).ToList())
+                    nilEl.Remove();
+                foreach (var attr in document.Descendants().SelectMany(e => e.Attributes()).Where(a => a.IsNamespaceDeclaration).ToList())
+                    attr.Remove();
 
                 // Add __type attributes to all elements based on the response type
                 if (res is IStellaMultiElementResponse multiTypes)

@@ -36,6 +36,13 @@ namespace StellaKFCPlugin.Handlers
         [StellaHandler("game", "sv7_common", typeof(GetCommonRequest))]
         public async Task<GetCommonResponse> GetCommonNabla() => await BuildCommon(7);
 
+        [StellaHandler("game", "common", typeof(GetCommonRequest))]
+        public async Task<GetCommonResponse> GetCommonBare() => await BuildCommon(Math.Abs(KfcVersion.GetVersion(Model)));
+
+        [StellaHandler("game_3", "common", typeof(GetCommonRequest))]
+        public async Task<GetCommonResponse> GetCommonBareGame3() => await BuildCommon(Math.Abs(KfcVersion.GetVersion(Model)));
+
+
         private async Task<GetCommonResponse> BuildCommon(int gameVersion)
         {
             using var db = new StellaKFCContext();
@@ -63,48 +70,60 @@ namespace StellaKFCPlugin.Handlers
                 var egSongsLocked = gameVersion == 7 ? provider.GetEgSongsLocked() : Array.Empty<SvEgSongLockedCategory>();
                 var kfcConfig = PluginConfig as StellaKFCPluginConfig ?? new StellaKFCPluginConfig();
 
-                // Information notices -> extend type 1 entries (asphyxia common.ts L345-365).
+                // asphyxia common.ts L75/L102: EXTENDS6/7 entries (filtered by
+                // checkVerStart) are pushed to `extend` FIRST — this includes kac
+                // (type 6), demo videos (type 21), megamix (type 17, id 91..94) and
+                // blaster-gate (type 18). Previously Stella only emitted megamix and
+                // dropped every other EXTENDS entry (kac/demo/blaster-gate were
+                // seeded into sv_static_extend but never read).
+                foreach (var ex in provider.GetExtends().Where(e => CheckVerStart(dVersion, e.MinVersion, e.StartDate, date)))
+                {
+                    extend.Add(new ExtendInfoRaw
+                    {
+                        Id = (int)ex.ExtendId, Type = (int)ex.ExtendType,
+                        Params = new object[] { ex.ParamNum1, ex.ParamNum2, ex.ParamNum3, ex.ParamNum4, ex.ParamNum5, ex.ParamStr1, ex.ParamStr2, ex.ParamStr3, ex.ParamStr4, ex.ParamStr5 },
+                    });
+                }
+
+                // Information notices -> extend type 1 entries (asphyxia common.ts L358-365).
+                long infoTime = KfcVersion.UnixMs(date.ToUniversalTime()) / 100000 * 100;
                 foreach (var info in information.Where(i => CheckVerStart(dVersion, i.MinVersion, i.StartDate, date)))
                 {
-                    // asphyxia common.ts L346: parseInt(date.getTime()/100000) * 100
-                    long currentTime = KfcVersion.UnixMs(date.ToUniversalTime()) / 100000 * 100;
                     extend.Add(new ExtendInfoRaw
                     {
                         Id = info.InfoId, Type = 1,
-                        Params = new object[] { 1, currentTime, 0, 0, 0, "[f:0]SERVER INFORMATION", info.InfoStr, "", "", "" },
+                        Params = new object[] { 1, infoTime, 0, 0, 0, "[f:0]SERVER INFORMATION", info.InfoStr, "", "", "" },
                     });
                 }
 
-                // Megamix extends (asphyxia megamix1..4 -> extend type 17, id 91..94).
-                var megamix = provider.GetMegamix();
-                uint extendId = 91;
-                foreach (var m in megamix.OrderBy(x => x.MegamixNo))
-                {
-                    extend.Add(new ExtendInfoRaw
-                    {
-                        Id = extendId++, Type = 17,
-                        Params = new object[] { 0, 0, 0, 0, 0, m.SongIds, "", "", "", "" },
-                    });
-                }
+               // Notification extend (Stella free-software banner; appended last so
+               // it never reorders asphyxia's EXTENDS/information entries).
 
-                // Notification extend (free-software banner).
-                {
-                    long now = KfcVersion.UnixMs(date.ToUniversalTime());
-                    extend.Add(new ExtendInfoRaw
-                    {
-                        Id = 1, Type = 1,
-                        Params = new object[] { 1, KfcVersion.UnixMs(date.ToUniversalTime())/100000, 0, 0, 0, $"[f:0] NOTIFICATION\nFREE SOFTWARE\n{date:s}", "", "", "", "" },
-                    });
-                }
+               var response = new GetCommonResponse { Status = "0" };
 
-                var response = new GetCommonResponse { Status = "0" };
-
-                // --- Events ---
-                AddDateEvents(events, currentDate, gameVersion, provider);
-                response.Event = new EventElement
+               // --- Events ---
+               // Startup flag event strings (asphyxia common.ts L57-77 / L85-99:
+               // flags.json [id].toggle → push [id].str to events). Added before
+               // date-based events so the order matches asphyxia (EVENT6/7 base,
+               // then flags.json toggles, then date events, then event-extend flags).
+               AddStartupFlagEvents(db, events);
+               AddDateEvents(events, currentDate, gameVersion, provider);
+                // Event extends (asphyxia common.ts L386-485): stamp/completestamp/
+                // tama/variant extends + achmissions event flags, driven by the
+                // SvEventList toggle state. Pushed before response.Event so
+                // TAMAADV_ENABLE / ACHIEVEMENT_EVENT_MISSION flags land in events.
+                AddEventExtends(extend, events, provider, gameVersion, dVersion, date);
+                // Notification extend (Stella free-software banner; appended last so
+                // it never reorders asphyxia's EXTENDS/information/event entries).
+                extend.Add(new ExtendInfoRaw
                 {
-                    Infos = events.Select(e => new EventInfo { EventId = e }).ToList(),
-                };
+                    Id = 1, Type = 1,
+                    Params = new object[] { 1, infoTime, 0, 0, 0, $"[f:0] NOTIFICATION\nFREE SOFTWARE\n{date:s}", "", "", "", "" },
+                });
+               response.Event = new EventElement
+               {
+                   Infos = events.Select(e => new EventInfo { EventId = e }).ToList(),
+               };
 
                 // --- Valgene ---
                 response.Valgene = BuildValgene(valgeneInfo, valgeneCatalog, dVersion);
@@ -124,8 +143,15 @@ namespace StellaKFCPlugin.Handlers
                 // --- Extend ---
                 response.Extend = BuildExtend(extend);
 
-                // --- Music override (loose element) ---
-                response.Music = new MusicOverrideElement();
+                // --- Music override (asphyxia common.ts L319-343) ---
+                // Filter by start date (checkVerStart(0,0,m.start,date)); each
+                // song emits two sibling <info> elements (info + charts).
+                response.Music = new MusicOverrideElement
+                {
+                    Overrides = musicOverride
+                        .Where(m => KfcVersion.CheckVerStart(0, 0, m.StartDate, date))
+                        .ToList(),
+                };
 
                 // --- Music limited ---
                 response.MusicLimited = await BuildMusicLimited(db, provider, gameVersion, dVersion, currentYmd, cabType, licensedSongs, egSongsLocked, kfcConfig);
@@ -216,8 +242,12 @@ namespace StellaKFCPlugin.Handlers
         {
             var el = new ArenaElement();
             if (currentArena == null || currentArena.Season == 0) return el;
-            bool arenaOpen = cfg.ArenaOpen || (KfcVersion.UnixMs(date.ToUniversalTime()) < currentArena.TimeEnd);
-            bool shopOpen = arenaOpen && cfg.ArenaSession != 0;
+            // asphyxia common.ts L496-497: arenaOpen uses `arena_no_endtime`
+            // (NOT a separate `arena_open` flag — asphyxia has no such config),
+            // and shopOpen is `arenaOpen && arena_station !== 'None'`.
+            bool arenaOpen = cfg.ArenaNoEndtime || cfg.ArenaOpen || (KfcVersion.UnixMs(date.ToUniversalTime()) < currentArena.TimeEnd);
+            string arenaStation = cfg.ArenaStation ?? "None";
+            bool shopOpen = arenaOpen && arenaStation != "None";
             if (!arenaOpen || dVersion < 20220425) return el;
 
             el.Season = currentArena.Season;
@@ -230,9 +260,12 @@ namespace StellaKFCPlugin.Handlers
             el.IsOpen = arenaOpen;
             el.IsShop = shopOpen;
 
-            if (shopOpen && cfg.ArenaStation != null)
+            if (shopOpen)
             {
-                var station = arenaItems.FirstOrDefault(s => s.SetName == cfg.ArenaStation);
+                // asphyxia sv7 merges {...ARENA_STATION_ITEMS, ...ARENA_STATION_ITEMS7} —
+                // NABLA entries override EG for the same key. Prefer the highest Version.
+                var station = arenaItems.Where(s => s.SetName == arenaStation)
+                    .OrderByDescending(s => s.Version).FirstOrDefault();
                 if (station != null && dVersion >= station.MinVersion)
                 {
                     var items = JArray.Parse(station.ItemsJson);
@@ -254,38 +287,21 @@ namespace StellaKFCPlugin.Handlers
             return el;
         }
 
-        private SkillCourseElement BuildSkillCourses(IReadOnlyList<EF.StaticData.SvCourseData> courses, int dVersion, string cabType)
-        {
-            var el = new SkillCourseElement();
-            foreach (var s in courses)
-            {
-                if (dVersion < s.MinVersion) continue;
-                var seasonCourses = JArray.Parse(s.CoursesJson);
-                foreach (var c in seasonCourses)
+       private SkillCourseElement BuildSkillCourses(IReadOnlyList<EF.StaticData.SvCourseData> courses, int dVersion, string cabType)
+       {
+           var el = new SkillCourseElement();
+           foreach (var s in courses)
+           {
+               if (dVersion < s.MinVersion) continue;
+               var seasonCourses = JArray.Parse(s.CoursesJson);
+                // Replicate asphyxia common.ts L645-690 skill_course build, including the
+                // duplication quirk for G/H cabinets: when the God-course condition holds,
+                // asphyxia reassigns courseData = courseData.concat(godCourses) and then
+                // acc = acc.concat(courseData), so the normal courses get appended a
+                // second time before the God courses. Match that ordering exactly.
+                List<CourseInfo> BuildSeasonCourses(short skillType)
                 {
-                    var ci = new CourseInfo
-                    {
-                        SeasonId = s.SeriesId,
-                        SeasonName = s.SeriesName,
-                        SeasonNewFlg = s.IsNew,
-                        CourseType = c["type"]!.Value<short>(),
-                        CourseId = c["id"]!.Value<short>(),
-                        CourseName = c["name"]!.ToString(),
-                        SkillLevel = c["level"]!.Value<short>(),
-                        SkillType = 0,
-                        SkillNameId = c["nameID"]!.Value<short>(),
-                        MatchingAssist = c["assist"]?.Value<int>() == 1,
-                        ClearRate = 5000,
-                        AvgScore = 15000000,
-                    };
-                    foreach (var t in c["tracks"]!)
-                        ci.Tracks.Add(new TrackInfo { TrackNo = t["no"]!.Value<short>(), MusicId = t["mid"]!.Value<int>(), MusicType = (sbyte)t["mty"]!.Value<int>() });
-                    el.Infos.Add(ci);
-                }
-
-                // God courses for G/H cabinets (asphyxia common.ts L668-690).
-                if ((cabType == "G" || cabType == "H") && s.HasGod == 1 && dVersion >= 20230530)
-                {
+                    var list = new List<CourseInfo>();
                     foreach (var c in seasonCourses)
                     {
                         var ci = new CourseInfo
@@ -297,7 +313,7 @@ namespace StellaKFCPlugin.Handlers
                             CourseId = c["id"]!.Value<short>(),
                             CourseName = c["name"]!.ToString(),
                             SkillLevel = c["level"]!.Value<short>(),
-                            SkillType = s.HasGod,
+                            SkillType = skillType,
                             SkillNameId = c["nameID"]!.Value<short>(),
                             MatchingAssist = c["assist"]?.Value<int>() == 1,
                             ClearRate = 5000,
@@ -305,11 +321,165 @@ namespace StellaKFCPlugin.Handlers
                         };
                         foreach (var t in c["tracks"]!)
                             ci.Tracks.Add(new TrackInfo { TrackNo = t["no"]!.Value<short>(), MusicId = t["mid"]!.Value<int>(), MusicType = (sbyte)t["mty"]!.Value<int>() });
-                        el.Infos.Add(ci);
+                        list.Add(ci);
                     }
+                    return list;
+                }
+
+                var normalCourses = BuildSeasonCourses(0);
+                el.Infos.AddRange(normalCourses);
+
+                // God courses for G/H cabinets (asphyxia common.ts L668-690).
+                // Reproduce the asphyxia concat quirk: acc receives normal courses again,
+                // then the God courses (normal + god appended to courseData, then concat).
+                if ((cabType == "G" || cabType == "H") && s.HasGod == 1 && dVersion >= 20230530)
+                {
+                    el.Infos.AddRange(normalCourses);
+                    el.Infos.AddRange(BuildSeasonCourses((short)s.HasGod));
+                }
+           }
+            return el;
+        }
+
+        // asphyxia common.ts L386-485: builds stamp/completestamp/tama/variant
+        // extends and achmissions event flags from the SvEventList toggle state
+        // (asphyxia webui/asset/config/events.json) + the SvUnlockEventData
+        // payload (asphyxia UNLOCK_EVENTS6/7). Only events the user toggled on
+        // (SvEventList.Enabled) and that satisfy checkVerStart emit extends.
+        private static void AddStartupFlagEvents(StellaKFCContext db, List<string> events)
+        {
+            foreach (var flag in db.SvStartupFlags.Where(f => f.Enabled))
+            {
+                var strings = JArray.Parse(string.IsNullOrEmpty(flag.EventStringsJson) ? "[]" : flag.EventStringsJson);
+                foreach (var str in strings)
+                    events.Add(str.ToString());
+            }
+        }
+
+        private void AddEventExtends(List<ExtendInfoRaw> extend, List<string> events,
+            IDataProvider provider, int gameVersion, int dVersion, DateTime date)
+        {
+            // refillStamps map (stmpid -> bonus count), shared across stamp events.
+            var refill = provider.GetUnlockEvent("refillStamps");
+            JObject? refillMap = refill is null ? null : JObject.Parse(refill.DataJson);
+
+            foreach (var eData in provider.GetEventList().Where(e => e.Enabled))
+            {
+                if (!KfcVersion.CheckVerStart(dVersion, eData.MinVersion, eData.StartDate, date)) continue;
+
+                var unlock = provider.GetUnlockEvent(eData.EventId);
+                if (unlock is null)
+                {
+                    // achmissions has no UNLOCK_EVENTS entry; it only pushes event flags.
+                    if (eData.EventId == "achmissions")
+                        AddAchmissionsEvents(events, eData);
+                    continue;
+                }
+
+                var info = JObject.Parse(unlock.DataJson);
+                var infoObj = info["info"] as JObject;
+                if (infoObj is null) continue;
+                string evType = unlock.Type;
+
+                switch (eData.Type)
+                {
+                    case "stamp":
+                        AddStampExtends(extend, infoObj, refillMap, evType);
+                        break;
+                    case "completestamp":
+                        extend.Add(new ExtendInfoRaw
+                        {
+                            Id = infoObj.Value<long>("id"), Type = 19,
+                            Params = new object[] { 0, 0, 0, 0, 0, (infoObj["data"] ?? new JObject()).ToString(Formatting.None), "", "", "", "" },
+                        });
+                        break;
+                    case "tama":
+                        events.Add("TAMAADV_ENABLE");
+                        extend.Add(new ExtendInfoRaw
+                        {
+                            Id = infoObj.Value<long>("id"), Type = 20,
+                            Params = new object[] { 0, 0, 0, 0, 0, infoObj.Value<string>("list") ?? "", "", "", "", "" },
+                        });
+                        break;
+                    case "variant":
+                        AddVariantExtend(extend, infoObj, eData);
+                        break;
                 }
             }
-            return el;
+        }
+
+        private static void AddStampExtends(List<ExtendInfoRaw> extend, JObject info, JObject? refillMap, string evType)
+        {
+            var data = info["data"] as JArray;
+            if (data is null) return;
+            string stmpHd = info.Value<string>("stmpHd") ?? "";
+            string stmpFt = info.Value<string>("stmpFt") ?? "";
+            string stmpHdJ = info["stmpHdJ"] is not null ? (info.Value<string>("stmpHdJ") ?? "") : stmpHd;
+            string stmpFtJ = info["stmpFtJ"] is not null ? (info.Value<string>("stmpFtJ") ?? "") : stmpFt;
+            foreach (var d in data)
+            {
+                long stmpid = d!.Value<long>("stmpid");
+                long stps = d.Value<long>("stps");
+                string stprwrd = d.Value<string>("stprwrd") ?? "";
+                long refillVal = refillMap is not null && refillMap[stmpid.ToString()] is not null ? 999999 : 0;
+                extend.Add(new ExtendInfoRaw
+                {
+                    Id = stmpid, Type = 3,
+                    Params = new object[] { 5L, stps, 0L, stps % 10000, refillVal, stmpHdJ, stmpHd, stmpFtJ, stmpFt, stprwrd },
+                });
+            }
+
+            if (evType == "select")
+            {
+                long textstampval = info["textstampval"] is not null ? info.Value<long>("textstampval") : 0;
+                extend.Add(new ExtendInfoRaw
+                {
+                    Id = info.Value<long>("id"), Type = 3,
+                    Params = new object[] { 9L, textstampval, 0L, 0L, 0L, info.Value<string>("sheet") ?? "", "", info.Value<string>("stmpSlHd") ?? "", info.Value<string>("stmpSlFt") ?? "", info.Value<string>("stmpBg") ?? "" },
+                });
+            }
+        }
+
+        private static void AddVariantExtend(List<ExtendInfoRaw> extend, JObject info, SvEventList eData)
+        {
+            // asphyxia reads minOverTrackRank/minSealDiff from the user config
+            // (eventConfig[id].settings); Stella stores them in SvEventList.SettingsJson.
+            int minOverTrackRank = 0, minSealDiff = 0;
+            if (!string.IsNullOrEmpty(eData.SettingsJson))
+            {
+                var s = JObject.Parse(eData.SettingsJson);
+                minOverTrackRank = s["minOverTrackRank"] is not null ? s.Value<int>("minOverTrackRank") : 0;
+                minSealDiff = s["minSealDiff"] is not null ? s.Value<int>("minSealDiff") : 0;
+            }
+            extend.Add(new ExtendInfoRaw
+            {
+                Id = info.Value<long>("id"), Type = 22,
+                Params = new object[] { 0L, info.Value<long>("setid"), minOverTrackRank, minSealDiff, 0L, "", "", "", "", "" },
+            });
+        }
+
+        private static void AddAchmissionsEvents(List<string> events, SvEventList eData)
+        {
+            // asphyxia: eventConfig['achmissions'].toggle is { 'M_XX': true, ... }.
+            // The user toggles individual achievement missions; Stella stores the
+            // toggle object in SvEventList.SettingsJson.
+            if (string.IsNullOrEmpty(eData.SettingsJson)) return;
+            var cfg = JObject.Parse(eData.SettingsJson);
+            var toggle = cfg["toggle"] as JObject;
+            if (toggle is null) return;
+            string eventIds = "\t";
+            string prio = "1";
+            foreach (var prop in toggle.Properties())
+            {
+                if (prop.Value?.Type == JTokenType.Boolean && prop.Value.Value<bool>())
+                {
+                    string suffix = prop.Name.Contains('_') ? prop.Name.Split('_')[1] : prop.Name;
+                    eventIds += (eventIds == "\t" ? "" : ",") + suffix;
+                    prio = suffix;
+                }
+            }
+            events.Add("ACHIEVEMENT_EVENT_MISSION" + eventIds);
+            events.Add("ACHIEVEMENT_EVENT_MISSION_PRIORITY\t" + prio);
         }
 
         private ExtendElement BuildExtend(List<ExtendInfoRaw> extend)
@@ -343,57 +513,97 @@ namespace StellaKFCPlugin.Handlers
         {
             var el = new MusicLimitedElement();
             int songNum = provider.GetSongNum();
-            var diffNames = new[] { "novice", "advanced", "exhaust", "infinite", "maximum", "ultimate" };
 
+            // asphyxia common.ts L287: music_limited.info = unlock_all_songs ? [] : songs.
+            // When unlock_all_songs is ON, asphyxia sends an EMPTY music_limited
+            // (the `songs` array built in the unlock block is discarded). The game
+            // shows all songs without needing limited entries.
             if (cfg.UnlockAllSongs)
-            {
-                int max = await db.SvMusics.AnyAsync() ? await db.SvMusics.MaxAsync(m => m.Id) : songNum;
-                for (int i = 1; i <= max; i++)
-                    for (byte mt = 0; mt < 6; mt++)
-                        el.Infos.Add(new MusicLimitedInfo { MusicId = i, MusicType = mt, Limited = 3 });
                 return el;
-            }
 
-            // Per-song limited computation (asphyxia common.ts L160-262).
+            // Non-unlock path (asphyxia common.ts L160-262). difnum == 0 means the
+            // chart does not exist for this music_db, used in place of asphyxia's
+            // per-version difficulty[absVersion][diff] != '0'.
+            var diffsMap = MigrationHelper.GetMusicDifficulties();
             var musics = await db.SvMusics.ToDictionaryAsync(m => m.Id);
             int lastId = musics.Count > 0 ? musics.Keys.Max() : songNum;
             var egMerge = egSongsLocked.SelectMany(c => c.MusicIds).ToArray();
+            var valkyrieSongs = provider.GetValkyrieSongs();
+            bool isGh = Regex.IsMatch(cabType, @"^(G|H)$");
 
             for (int i = 0; i <= lastId; i++)
             {
                 if (!musics.TryGetValue(i, out var song)) continue;
                 int absVersion = gameVersion;
+                // Skip unreleased songs (asphyxia L185/L225): info.version <=
+                // absVersion AND distribution_date in the future.
+                if (song.Version <= absVersion && song.DistributionDate > 0 && song.DistributionDate > currentYmd)
+                    continue;
+
+                int limitedNo = 2;
 
                 if (absVersion == 6)
                 {
-                    int limitedNo = 2;
-                    if (licensedSongs.Contains(i)) limitedNo += 1;
-                    else if (provider.GetValkyrieSongs().Contains(i) && !Regex.IsMatch(cabType, @"^(G|H)$")) limitedNo -= 1;
-                    if (i == 2034) limitedNo = 2;
-                    for (byte mt = 0; mt < 6; mt++)
-                        el.Infos.Add(new MusicLimitedInfo { MusicId = i, MusicType = mt, Limited = (byte)limitedNo });
+                    if (song.Version == 6)
+                    {
+                        if (licensedSongs.Contains(i)) limitedNo += 1;
+                        else if (valkyrieSongs.Contains(i) && !isGh) limitedNo -= 1;
+                        if (i == 2034) limitedNo = 2;
+                        AddLimitedCharts(el, diffsMap, i, (byte)limitedNo);
+                    }
+                    else if (song.InfVer == 6)
+                    {
+                        // XCD (INFINITE) track — only music_type 3 (asphyxia L206-213).
+                        if (i == 469) limitedNo = 2;
+                        if (ChartExists(diffsMap, i, 3))
+                            el.Infos.Add(new MusicLimitedInfo { MusicId = i, MusicType = 3, Limited = (byte)limitedNo });
+                    }
                 }
                 else if (absVersion == 7)
                 {
-                    // NABLA: songs with version == 7 or in EGSONGS_LOCKED crossresonance.
-                    if (egMerge.Contains(i))
+                    // NABLA: songs released in NABLA (info.version === '7') OR in
+                    // EGSONGS_LOCKED crossresonance (asphyxia common.ts L226-240).
+                    if (song.Version == 7 || egMerge.Contains(i))
                     {
-                        int limitedNo = 2;
                         if (licensedSongs.Contains(i)) limitedNo += 1;
-                        for (byte mt = 0; mt < 6; mt++)
-                            el.Infos.Add(new MusicLimitedInfo { MusicId = i, MusicType = mt, Limited = (byte)limitedNo });
+                        AddLimitedCharts(el, diffsMap, i, (byte)limitedNo);
                     }
                 }
 
-                // Licensed songs released prior to current version.
-                if (song.Version > 0 && song.Version < absVersion && licensedSongs.Contains(i))
+                // Licensed songs released prior to current version (asphyxia L247-258).
+               if (song.Version > 0 && song.Version < absVersion && licensedSongs.Contains(i))
+               {
+                   int licensedLimited = 3;
+                   AddLimitedCharts(el, diffsMap, i, (byte)licensedLimited);
+               }
+           }
+            // asphyxia common.ts L579-593 + L287: April Fools songs are appended to
+            // `songs` before the L287 check, so they only appear in music_limited
+            // when unlock_all_songs is OFF (music_limited = songs). Each April Fools
+            // song emits 5 entries (music_type 0..4, limited:3) with no difnum filter.
+            if (gameVersion >= 6 && currentYmd % 10000 == 401)
+            {
+                foreach (var afsong in provider.GetAprilFoolsSongs())
                 {
-                    int limitedNo = 3;
-                    for (byte mt = 0; mt < 6; mt++)
-                        el.Infos.Add(new MusicLimitedInfo { MusicId = i, MusicType = mt, Limited = (byte)limitedNo });
+                    for (byte mt = 0; mt < 5; mt++)
+                        el.Infos.Add(new MusicLimitedInfo { MusicId = afsong, MusicType = mt, Limited = 3 });
                 }
             }
             return el;
+        }
+
+        private static void AddLimitedCharts(MusicLimitedElement el, Dictionary<int, double[]> diffs, int id, byte limited)
+        {
+            if (!diffs.TryGetValue(id, out var difnum)) return;
+            for (byte mt = 0; mt < 6; mt++)
+                if (difnum[mt] != 0)
+                    el.Infos.Add(new MusicLimitedInfo { MusicId = id, MusicType = mt, Limited = limited });
+        }
+
+        private static bool ChartExists(Dictionary<int, double[]> diffs, int id, int mt)
+        {
+            if (!diffs.TryGetValue(id, out var difnum)) return false;
+            return mt >= 0 && mt < difnum.Length && difnum[mt] != 0;
         }
 
         private List<WeeklyMusicInfo> BuildWeeklyMusic(StellaKFCContext db, int dVersion, DateTime date)
