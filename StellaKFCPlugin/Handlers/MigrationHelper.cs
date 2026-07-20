@@ -179,8 +179,8 @@ public static class MigrationHelper
             SkillBaseId = 0,
             SkillNameId = 0,
             Pcb = 0,
-            Packets = 10000,
-            Blocks = 10000,
+            Packets = 0,
+            Blocks = 0,
             PlayCount = 0, DayCount = 0, TodayCount = 0,
             PlayChain = 0, MaxPlayChain = 0,
             WeekCount = 0, WeekPlayCount = 0, WeekChain = 0, MaxWeekChain = 0,
@@ -252,7 +252,7 @@ public static class MigrationHelper
                 Profile = v7.Id, MusicId = s.MusicId, Type = s.Type,
                 Score = s.Score, Exscore = exscore, Clear = newClear, Grade = s.Grade,
                 ButtonRate = s.ButtonRate, LongRate = s.LongRate, VolRate = s.VolRate,
-                Volforce = volforce, PlayCount = s.PlayCount, DbVer = 1, Version = 7,
+                Volforce = volforce, PlayCount = 0, DbVer = 1, Version = 7,
             });
         }
 

@@ -78,8 +78,11 @@ namespace StellaKFCPlugin.Handlers
                 if (matches.Count < 1)
                     return Task.FromResult(new LoungeResponse { Interval = 5 });
 
-                var longestWait = matches.Max(m => m.Sec);
-                return Task.FromResult(new LoungeResponse { Interval = 10, Wait = (uint)longestWait });
+                // asphyxia lounge computes `longestWait = Math.max(...matches.map(m => m.sec))`
+                // but globalMatch never stores `sec` on the room object, so m.sec is
+                // undefined and Math.max yields NaN — K.ITEM('u32', NaN) serialises as 0.
+                // Match that effective behaviour (wait = 0) for byte-level parity.
+                return Task.FromResult(new LoungeResponse { Interval = 10, Wait = 0 });
             }
         }
 
