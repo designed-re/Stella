@@ -94,7 +94,15 @@ namespace StellaKFCPlugin.Handlers
             var param = await db.SvParams.Where(x => x.Profile == profile.Id && x.Version == gameVersion).ToListAsync();
             var courses = await db.SvCourseRecords.Where(x => x.Profile == profile.Id && x.Version == gameVersion).ToListAsync();
             var valgeneTicket = await db.SvValgeneTickets.SingleOrDefaultAsync(x => x.Profile == profile.Id);
-            var arena = await db.SvArenas.SingleOrDefaultAsync(a => a.Profile == profile.Id && a.Version == gameVersion);
+            // asphyxia profiles.ts L947-952: arena is looked up by the CURRENT
+            // season when arena is open (arena_no_endtime || now < time_end), or
+            // season 0 when closed. Filtering by season (not just profile+version)
+            // also avoids SingleOrDefaultAsync throwing when a profile has arena
+            // rows for multiple seasons.
+            var currentArena = await db.SvCurrentArenas.FirstOrDefaultAsync(a => a.Version == gameVersion);
+            bool arenaOpen = cfg.ArenaNoEndtime || cfg.ArenaOpen || (KfcVersion.UnixMs(DateTime.UtcNow) < (currentArena?.TimeEnd ?? 0));
+            int arenaSeason = arenaOpen && currentArena != null ? currentArena.Season : 0;
+            var arena = await db.SvArenas.SingleOrDefaultAsync(a => a.Profile == profile.Id && a.Version == gameVersion && a.Season == arenaSeason);
             var variant = await db.SvVariantPowers.SingleOrDefaultAsync(v => v.Profile == profile.Id && v.Version == gameVersion);
 
             // Unlock navigators/appeal cards if configured (asphyxia unlockNavigators/unlockAppealCards).

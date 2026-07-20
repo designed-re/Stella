@@ -322,32 +322,38 @@ namespace StellaKFCPlugin.Models
     [XmlRoot(ElementName = "arena")]
     public class ArenaElement
     {
+        // All fields nullable so that when the arena is closed (season 0 /
+        // !arenaOpen / old datecode) BuildArena returns an empty ArenaElement
+        // that serialises as `<arena></arena>` — matching asphyxia
+        // `arenaData = {}` (send.object with no keys). XmlSerializer omits
+        // null [XmlElement] value-type fields, so the closed-arena response
+        // carries no children, byte-for-byte like asphyxia.
         [XmlElement(ElementName = "season")]
-        public int Season { get; set; }
+        public int? Season { get; set; }
 
         [XmlElement(ElementName = "rule")]
-        public int Rule { get; set; }
+        public int? Rule { get; set; }
 
         [XmlElement(ElementName = "rank_match_target")]
-        public int RankMatchTarget { get; set; }
+        public int? RankMatchTarget { get; set; }
 
         [XmlElement(ElementName = "time_start")]
-        public ulong TimeStart { get; set; }
+        public ulong? TimeStart { get; set; }
 
         [XmlElement(ElementName = "time_end")]
-        public ulong TimeEnd { get; set; }
+        public ulong? TimeEnd { get; set; }
 
         [XmlElement(ElementName = "shop_start")]
-        public ulong ShopStart { get; set; }
+        public ulong? ShopStart { get; set; }
 
         [XmlElement(ElementName = "shop_end")]
-        public ulong ShopEnd { get; set; }
+        public ulong? ShopEnd { get; set; }
 
         [XmlElement(ElementName = "is_open")]
-        public bool IsOpen { get; set; }
+        public bool? IsOpen { get; set; }
 
         [XmlElement(ElementName = "is_shop")]
-        public bool IsShop { get; set; }
+        public bool? IsShop { get; set; }
 
         [XmlElement(ElementName = "catalog")]
         public List<ArenaCatalog> Catalogs { get; set; } = new();
@@ -442,4 +448,3 @@ namespace StellaKFCPlugin.Models
         public byte Limited { get; set; }
     }
 }
-

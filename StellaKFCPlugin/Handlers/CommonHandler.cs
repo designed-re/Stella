@@ -242,8 +242,12 @@ namespace StellaKFCPlugin.Handlers
         {
             var el = new ArenaElement();
             if (currentArena == null || currentArena.Season == 0) return el;
-            bool arenaOpen = cfg.ArenaOpen || (KfcVersion.UnixMs(date.ToUniversalTime()) < currentArena.TimeEnd);
-            bool shopOpen = arenaOpen && cfg.ArenaSession != 0;
+            // asphyxia common.ts L496-497: arenaOpen uses `arena_no_endtime`
+            // (NOT a separate `arena_open` flag — asphyxia has no such config),
+            // and shopOpen is `arenaOpen && arena_station !== 'None'`.
+            bool arenaOpen = cfg.ArenaNoEndtime || cfg.ArenaOpen || (KfcVersion.UnixMs(date.ToUniversalTime()) < currentArena.TimeEnd);
+            string arenaStation = cfg.ArenaStation ?? "None";
+            bool shopOpen = arenaOpen && arenaStation != "None";
             if (!arenaOpen || dVersion < 20220425) return el;
 
             el.Season = currentArena.Season;
@@ -256,11 +260,11 @@ namespace StellaKFCPlugin.Handlers
             el.IsOpen = arenaOpen;
             el.IsShop = shopOpen;
 
-            if (shopOpen && cfg.ArenaStation != null)
+            if (shopOpen)
             {
                 // asphyxia sv7 merges {...ARENA_STATION_ITEMS, ...ARENA_STATION_ITEMS7} —
                 // NABLA entries override EG for the same key. Prefer the highest Version.
-                var station = arenaItems.Where(s => s.SetName == cfg.ArenaStation)
+                var station = arenaItems.Where(s => s.SetName == arenaStation)
                     .OrderByDescending(s => s.Version).FirstOrDefault();
                 if (station != null && dVersion >= station.MinVersion)
                 {
